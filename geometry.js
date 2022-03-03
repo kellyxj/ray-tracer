@@ -5,6 +5,9 @@ class Geometry {
         this.normalToWorld = mat4.create();
         this.vboBox = new VBObox();
     }
+    initVbo(gl) {
+        
+    }
     setIdentity() {
 
     }
@@ -25,19 +28,21 @@ class Geometry {
 
     }
 
-    drawPreview() {
+    drawPreview(mvpMatrix) {
         this.vboBox.switchToMe();
-        this.vboBox.adjust();
+        this.vboBox.adjust(this.modelMatrix, mvpMatrix);
         this.vboBox.reload();
         this.vboBox.draw();
     }
 }
 
 class Grid extends Geometry {
-
+    initVbo(gl) {
+        this.vboBox.init(gl, makeGroundGrid(), 400);
+    }
 }
 
-class Disc extends Geometry {
+class Disk extends Geometry {
 
 }
 

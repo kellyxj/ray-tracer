@@ -2,8 +2,11 @@ var imageBuffer = new ImageBuffer();
 var scene = new Scene();
 var rayView = new TextureMapVBO();
 
+var g_timeStep = 1000/60;
+var g_last = Date.now();
+
 //handles user interface for camera controls
-var cameraController = new CameraController([-30, 0, 2], 30, 1, 100);
+var cameraController = new CameraController([-30, 0, 2], 0, 0, false, 30, 1, 100);
 
 function main() {
 
@@ -18,24 +21,70 @@ function main() {
     gl.clearColor(0.0, 0.0, 0.0, 1.0);
     gl.clear(gl.COLOR_BUFFER_BIT);
 
-    var u_ModelMatrix = gl.getUniformLocation(gl.program, 'u_ModelMatrix');
-    if (!u_ModelMatrix) { 
-        console.log('Failed to get the storage location of u_ModelMatrix');
-        return;
-    }
-    var modelMatrix = mat4.create();
+    document.addEventListener("keydown", (e) => {
+        if(e.key == "w") {
+            cameraController.moveForward();
+        }
+        else if(e.key == "s" ) {
+            cameraController.moveBack();
+        }
+        else if(e.key == "a") {
+            cameraController.moveLeft();
+        }
+        else if(e.key == "d") {
+            cameraController.moveRight();
+        }
+        else if(e.key == "e") {
+            cameraController.moveUp();
+        }
+        else if(e.key == "q") {
+            cameraController.moveDown();
+        }
+        else if(e.key == "ArrowUp") {
+            cameraController.tiltUp();
+        }
+        else if(e.key == "ArrowDown") {
+            cameraController.tiltDown();
+        }
+        else if(e.key == "ArrowLeft") {
+            cameraController.panLeft();
+        }
+        else if(e.key == "ArrowRight") {
+            cameraController.panRight();
+        }
+    });
 
-    var u_MvpMatrix = gl.getUniformLocation(gl.program, 'u_MvpMatrix');
-    if (!u_MvpMatrix) { 
-        console.log('Failed to get the storage location of u_MvpMatrix');
-        return;
-    }
+    scene.init(gl);
 
-    var mvpMatrix = mat4.create();
-
+    var tick = function() {
+        g_timeStep = animate();
+        drawPreview(gl);
+        
+        requestAnimationFrame(tick, canvas);   
+      };
+      tick();		
 }
 
-function drawPreview() {
+function animate() {
+    //==============================================================================  
+    // Returns how much time (in milliseconds) passed since the last call to this fcn.
+      var now = Date.now();	        
+      var elapsed = now - g_last;	// amount of time passed, in integer milliseconds
+      g_last = now;               // re-set our stopwatch/timer.
+    
+      return elapsed;
+    }
+
+function drawPreview(gl) {
+    var perspectiveMatrix = mat4.create();
+    mat4.perspective(perspectiveMatrix, glMatrix.toRadian(cameraController.fovy), cameraController.aspectRatio, cameraController.near, cameraController.far);
+
+    var viewMatrix = mat4.create();
+    mat4.lookAt(viewMatrix, cameraController.eyePosition, cameraController.aimPoint, cameraController.upVector);
+
+    var mvpMatrix = mat4.create();
+    mat4.multiply(mvpMatrix, perspectiveMatrix, viewMatrix);
+
     gl.viewport(0,
                 0,
                 gl.drawingBufferWidth/2, 
@@ -43,7 +92,7 @@ function drawPreview() {
     gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
 
     for(var item of scene.items) {
-        item.drawPreview();
+        item.drawPreview(mvpMatrix);
     }
 }
 

@@ -1,8 +1,23 @@
 class VBObox {
     constructor() {
         this.gl;
-        this.VERT_SRC;
-        this.FRAG_SRC;
+        this.VERT_SRC = 'uniform mat4 u_ModelMatrix;\n' +
+                        'uniform mat4 u_MvpMatrix;\n'+
+                        'attribute vec4 a_Pos;\n'+
+                        'attribute vec3 a_Colr;\n'+
+                        'varying vec4 v_Color;\n'+
+                        'void main() {\n'+
+                            'gl_Position = u_MvpMatrix * u_ModelMatrix * (a_Pos);\n'+
+                            'gl_PointSize = 10.0;\n'+
+                            'v_Color = vec4(a_Colr, 1);\n'+
+                        '}';
+        this.FRAG_SRC = '//  #ifdef GL_ES\n'+
+                        'precision mediump float;\n'+
+                        '//  #endif GL_ES\n'+ 
+                        'varying vec4 v_Color;\n'+
+                        'void main() {\n'+
+                        '   gl_FragColor = vec4(v_Color.rgb,1);\n' +
+                        '}';
 
         this.vboContents;
         this.nVerts;
@@ -37,6 +52,9 @@ class VBObox {
         this.gl = gl;
         this.vboContents = vboContents;
         this.nVerts = n;
+        this.FSIZE = this.vboContents.BYTES_PER_ELEMENT;
+
+        this.drawMode = gl.LINES;
 
         this.vboFcount_a_Pos = 4;
         this.vboFcount_a_Colr = 3;
@@ -143,10 +161,10 @@ class VBObox {
         mat4.copy(this.ModelMat, modelMatrix);
         this.gl.uniformMatrix4fv(this.u_ModelMatLoc,
             false, 				
-            this.ModelMat.elements);
+            this.ModelMat);
 
         mat4.copy(this.mvpMatrix, mvpMatrix);
-        this.gl.uniformMatrix4fv(this.u_MvpMatrixLoc, false, this.mvpMatrix.elements);
+        this.gl.uniformMatrix4fv(this.u_MvpMatrixLoc, false, this.mvpMatrix);
     }
 
     draw() {
@@ -172,3 +190,58 @@ class TextureMapVBO extends VBObox {
         super();
     }
 }
+
+function makeGroundGrid() {
+    var xcount = 100;			// # of lines to draw in x,y to make the grid.
+      var ycount = 100;		
+      var xymax	= 50.0;			// grid size; extends to cover +/-xymax in x and y.
+       var xColr = new Float32Array([.7, .7, 1]);	// bright yellow
+       var yColr = new Float32Array([1, .2, .7]);	// bright green.
+       
+      // Create an (global) array to hold this ground-plane's vertices:
+    var floatsPerVertex = 7;
+      var gndVerts = new Float32Array(floatsPerVertex*2*(xcount+ycount));
+                          // draw a grid made of xcount+ycount lines; 2 vertices per line.
+                          
+      var xgap = xymax/(xcount-1);		// HALF-spacing between lines in x,y;
+      var ygap = xymax/(ycount-1);		// (why half? because v==(0line number/2))
+      
+      // First, step thru x values as we make vertical lines of constant-x:
+      for(v=0, j=0; v<2*xcount; v++, j+= floatsPerVertex) {
+          if(v%2==0) {	// put even-numbered vertices at (xnow, -xymax, 0)
+              gndVerts[j  ] = -xymax + (v  )*xgap;	// x
+              gndVerts[j+1] = -xymax;								// y
+              gndVerts[j+2] = 0.0;									// z
+              gndVerts[j+3] = 1.0;									// w.
+          }
+          else {				// put odd-numbered vertices at (xnow, +xymax, 0).
+              gndVerts[j  ] = -xymax + (v-1)*xgap;	// x
+              gndVerts[j+1] = xymax;								// y
+              gndVerts[j+2] = 0.0;									// z
+              gndVerts[j+3] = 1.0;									// w.
+          }
+          gndVerts[j+4] = xColr[0];			// red
+          gndVerts[j+5] = xColr[1];			// grn
+          gndVerts[j+6] = xColr[2];			// blu
+      }
+      // Second, step thru y values as wqe make horizontal lines of constant-y:
+      // (don't re-initialize j--we're adding more vertices to the array)
+      for(v=0; v<2*ycount; v++, j+= floatsPerVertex) {
+          if(v%2==0) {		// put even-numbered vertices at (-xymax, ynow, 0)
+              gndVerts[j  ] = -xymax;								// x
+              gndVerts[j+1] = -xymax + (v  )*ygap;	// y
+              gndVerts[j+2] = 0.0;									// z
+              gndVerts[j+3] = 1.0;									// w.
+          }
+          else {					// put odd-numbered vertices at (+xymax, ynow, 0).
+              gndVerts[j  ] = xymax;								// x
+              gndVerts[j+1] = -xymax + (v-1)*ygap;	// y
+              gndVerts[j+2] = 0.0;									// z
+              gndVerts[j+3] = 1.0;									// w.
+          }
+          gndVerts[j+4] = yColr[0];			// red
+          gndVerts[j+5] = yColr[1];			// grn
+          gndVerts[j+6] = yColr[2];			// blu
+      }
+    return gndVerts;
+  }
