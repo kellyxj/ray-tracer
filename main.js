@@ -1,4 +1,9 @@
-var worldBox = new VBObox();
+var imageBuffer = new ImageBuffer();
+var scene = new Scene();
+var rayView = new TextureMapVBO();
+
+//handles user interface for camera controls
+var cameraController = new CameraController([-30, 0, 2], 30, 1, 100);
 
 function main() {
 
@@ -9,8 +14,6 @@ function main() {
         console.log('Failed to get the rendering context for WebGL');
         return;
     }
-    worldBox.init(gl, makeGroundGrid(), 400);
-    worldBox.drawMode = gl.LINES;
 
     gl.clearColor(0.0, 0.0, 0.0, 1.0);
     gl.clear(gl.COLOR_BUFFER_BIT);
@@ -20,7 +23,7 @@ function main() {
         console.log('Failed to get the storage location of u_ModelMatrix');
         return;
     }
-    var modelMatrix = new Matrix4();
+    var modelMatrix = mat4.create();
 
     var u_MvpMatrix = gl.getUniformLocation(gl.program, 'u_MvpMatrix');
     if (!u_MvpMatrix) { 
@@ -28,12 +31,32 @@ function main() {
         return;
     }
 
-    var mvpMatrix = new Matrix4();
+    var mvpMatrix = mat4.create();
 
 }
 
-function drawAll() {
-    
+function drawPreview() {
+    gl.viewport(0,
+                0,
+                gl.drawingBufferWidth/2, 
+                gl.drawingBufferHeight);
+    gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
+
+    for(var item of scene.items) {
+        item.drawPreview();
+    }
+}
+
+function drawTextureMap() {
+    gl.viewport(gl.drawingBufferWidth/2,
+                0,
+                gl.drawingBufferWidth/2,
+                gl.drawingBufferHeight);
+    gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
+
+    rayView.switchToMe();
+    rayView.adjust();
+    rayView.draw();
 }
 
 main();

@@ -12,9 +12,9 @@ class VBObox {
 
         this.drawMode;
 
-        this.vboFcount_a_Pos = 4;
-        this.vboFcount_a_Colr = 3;
-        this.vboOffset_a_Pos = 0; 
+        this.vboFcount_a_Pos;
+        this.vboFcount_a_Colr;
+        this.vboOffset_a_Pos; 
         this.vboOffset_a_Colr;  
 
         this.vboLoc;									// GPU Location for Vertex Buffer Object, 
@@ -26,10 +26,10 @@ class VBObox {
 	    this.a_ColrLoc;								
 
 	            //---------------------- Uniform locations &values in our shaders
-	    this.ModelMat = new Matrix4();
+	    this.ModelMat = mat4.create();
 	    this.u_ModelMatLoc;							
 
-        this.mvpMatrix = new Matrix4();
+        this.mvpMatrix = mat4.create();
         this.u_MvpMatrixLoc;
     }
 
@@ -38,7 +38,11 @@ class VBObox {
         this.vboContents = vboContents;
         this.nVerts = n;
 
-    this.vboBytes = this.vboContents.length * this.FSIZE;
+        this.vboFcount_a_Pos = 4;
+        this.vboFcount_a_Colr = 3;
+        this.vboOffset_a_Pos = 0; 
+
+        this.vboBytes = this.vboContents.length * this.FSIZE;
         this.vboStride = this.vboBytes / this.nVerts; 
         this.vboOffset_a_Colr = this.vboFcount_a_Pos * this.FSIZE;
         this.shaderLoc = createProgram(this.gl, this.VERT_SRC, this.FRAG_SRC);
@@ -136,15 +140,12 @@ class VBObox {
                               '.adjust() call you needed to call this.switchToMe()!!');
         }
         
-        this.ModelMat.setIdentity();
-        this.ModelMat.set(modelMatrix);
+        mat4.copy(this.ModelMat, modelMatrix);
         this.gl.uniformMatrix4fv(this.u_ModelMatLoc,
             false, 				
             this.ModelMat.elements);
 
-        this.mvpMatrix.setIdentity();
-        this.mvpMatrix.set(mvpMatrix);
-            
+        mat4.copy(this.mvpMatrix, mvpMatrix);
         this.gl.uniformMatrix4fv(this.u_MvpMatrixLoc, false, this.mvpMatrix.elements);
     }
 
@@ -163,5 +164,11 @@ class VBObox {
         this.gl.bufferSubData(this.gl.ARRAY_BUFFER,
                             0,                  
                             this.vboContents); 
+    }
+}
+
+class TextureMapVBO extends VBObox {
+    constructor() {
+        super();
     }
 }
