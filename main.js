@@ -1,4 +1,4 @@
-var imageBuffer = new ImageBuffer();
+var imageBuffer = new ImageBuffer(512, 512);
 var scene = new Scene();
 var rayView = new TextureMapVBO();
 
@@ -52,17 +52,25 @@ function main() {
         else if(e.key == "ArrowRight") {
             cameraController.panRight();
         }
+        else if(e.key == "t") {
+            scene.makeRayTracedImage();
+            rayView.switchToMe();
+            rayView.reload(imageBuffer);
+        }
     });
 
-    scene.init(gl);
+    scene.init(gl, imageBuffer);
 
+    imageBuffer.setTestPattern();
+
+    rayView.init(gl, imageBuffer);
     var tick = function() {
         g_timeStep = animate();
-        drawPreview(gl);
+        drawAll(gl);
         
         requestAnimationFrame(tick, canvas);   
       };
-      tick();		
+      tick();			
 }
 
 function animate() {
@@ -74,6 +82,12 @@ function animate() {
     
       return elapsed;
     }
+
+function drawAll(gl) {
+    gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
+    drawPreview(gl);
+    drawTextureMap(gl);
+}
 
 function drawPreview(gl) {
     var perspectiveMatrix = mat4.create();
@@ -89,22 +103,20 @@ function drawPreview(gl) {
                 0,
                 gl.drawingBufferWidth/2, 
                 gl.drawingBufferHeight);
-    gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
+    
 
     for(var item of scene.items) {
         item.drawPreview(mvpMatrix);
     }
 }
 
-function drawTextureMap() {
+function drawTextureMap(gl) {
     gl.viewport(gl.drawingBufferWidth/2,
                 0,
                 gl.drawingBufferWidth/2,
                 gl.drawingBufferHeight);
-    gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
 
     rayView.switchToMe();
-    rayView.adjust();
     rayView.draw();
 }
 
