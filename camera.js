@@ -7,7 +7,7 @@ class Ray {
 
 class Camera {
     constructor() {
-        this.eyePt = vec4.fromValues(0,0,0,1);
+        this.eyePoint = vec4.fromValues(0,0,0,1);
 
 	    this.uAxis = vec4.fromValues(1,0,0,0);			
         this.vAxis = vec4.fromValues(0,1,0,0);
@@ -36,15 +36,31 @@ class Camera {
         this.near = near;
     }
 
-    rayPerspective() {
-
+    rayPerspective(fovy, aspect, near) {
+        var top = near * Math.tan(.5 * fovy * Math.PI/180);
+        this.rayFrustum(-top * aspect, top * aspect, -top, top, near);
     }
 
-    rayLookAt() {
+    rayLookAt(eyePoint, aimPoint, upVec) {
+        this.eyePoint = eyePoint;
+        vec4.subtract(this.nAxis, this.eyePoint, aimPoint);
+        vec4.normalize(this.nAxis, this.nAxis);
 
+        vec3.cross(this.uAxis, upVec, this.nAxis);
+        vec4.normalize(this.uAxis, this.uAxis);
+        vec3.cross(this.vAxis, this.nAxis, this.uAxis);
     }
 
-    setEyeRay() {
-        
+    setEyeRay(eyeRay, xPos, yPos) {
+        var posU = this.left + xPos * this.ufrac;
+        var posV = this.bot + yPos * this.vfrac;
+
+        var worldPos = vec4.create();
+        vec4.scaleAndAdd(worldPos, worldPos, this.uAxis, posU);
+        vec4.scaleAndAdd(worldPos, worldPos, this.vAxis, posV);
+        vec4.scaleAndAdd(worldPos, worldPos, this.nAxis, -this.near);
+
+        vec4.copy(eyeRay.origin, this.eyePoint);
+        vec4.copy(eyeRay.dir, worldPos);
     }
 }
