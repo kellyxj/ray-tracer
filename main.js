@@ -6,7 +6,7 @@ var g_timeStep = 1000/60;
 var g_last = Date.now();
 
 //handles user interface for camera controls
-var cameraController = new CameraController([-30, 0, 2], 0, 0, false, 30, 1, 100);
+var cameraController = new CameraController([-30, 0, 2], 0, 0, false, 45, 1, 100);
 
 function main() {
 
@@ -53,13 +53,16 @@ function main() {
             cameraController.panRight();
         }
         else if(e.key == "t") {
-            scene.makeRayTracedImage();
+            scene.makeRayTracedImage(cameraController);
             rayView.switchToMe();
             rayView.reload(imageBuffer);
         }
+        else if(e.key == " ") {
+            
+        }
     });
 
-    scene.init(gl, imageBuffer);
+    scene.init(gl, imageBuffer, cameraController);
 
     imageBuffer.setTestPattern();
 
@@ -91,7 +94,7 @@ function drawAll(gl) {
 
 function drawPreview(gl) {
     var perspectiveMatrix = mat4.create();
-    mat4.perspective(perspectiveMatrix, glMatrix.toRadian(cameraController.fovy), cameraController.aspectRatio, cameraController.near, cameraController.far);
+    mat4.perspective(perspectiveMatrix, glMatrix.toRadian(cameraController.fovy), cameraController.aspect, cameraController.near, cameraController.far);
 
     var viewMatrix = mat4.create();
     mat4.lookAt(viewMatrix, cameraController.eyePosition, cameraController.aimPoint, cameraController.upVector);

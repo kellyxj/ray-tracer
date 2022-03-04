@@ -332,8 +332,8 @@ class TextureMapVBO extends VBObox {
 }
 
 function makeGroundGrid() {
-    var xcount = 100;			// # of lines to draw in x,y to make the grid.
-      var ycount = 100;		
+    var xcount = 101;			// # of lines to draw in x,y to make the grid.
+      var ycount = 101;		
       var xymax	= 50.0;			// grid size; extends to cover +/-xymax in x and y.
        var xColr = new Float32Array([.7, .7, 1, 1]);	// bright yellow
        var yColr = new Float32Array([1, .2, .7, 1]);	// bright green.

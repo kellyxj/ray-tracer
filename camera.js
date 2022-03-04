@@ -20,10 +20,18 @@ class Camera {
 	    this.near = 1.0;
 
         //resolution
-        this.xmax = 256;
-	    this.ymax = 256;
+        this.xmax = 512;
+	    this.ymax = 512;
 
         //pixel width and height
+        this.ufrac = (this.right - this.left) / this.xmax;
+	    this.vfrac = (this.top   - this.bot ) / this.ymax;
+    }
+
+    setSize(xMax, yMax) {
+        this.xMax = xMax;
+        this.yMax = yMax;
+
         this.ufrac = (this.right - this.left) / this.xmax;
 	    this.vfrac = (this.top   - this.bot ) / this.ymax;
     }

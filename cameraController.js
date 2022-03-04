@@ -23,7 +23,7 @@ class CameraController {
 
         this.inverted = inverted;
 
-        this.aspectRatio = 1;
+        this.aspect = 1;
     }
 
     moveForward() {
