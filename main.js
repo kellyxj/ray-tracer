@@ -56,6 +56,7 @@ function main() {
             scene.makeRayTracedImage(cameraController);
             rayView.switchToMe();
             rayView.reload(imageBuffer);
+            console.log("tracing");
         }
         else if(e.key == " ") {
             

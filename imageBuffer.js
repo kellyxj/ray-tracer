@@ -9,10 +9,10 @@ class ImageBuffer {
         for(let i = 0; i < this.xSize; i++) {
             for(let j = 0; j < this.ySize; j++) {
                 const index = (j*this.xSize + i) * 4;
-                this.intBuffer[index] = 255;
+                this.intBuffer[index] = 0;
                 this.intBuffer[index+1] = 0;
                 this.intBuffer[index+2] = 0;
-                this.intBuffer[index+3] = 255;
+                this.intBuffer[index+3] = 0;
             }
         }
         this.toFloat();

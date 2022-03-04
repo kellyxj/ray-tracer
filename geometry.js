@@ -48,8 +48,8 @@ class Geometry {
 class Grid extends Geometry {
     constructor() {
         super();
-        this.xgap = 2.0;
-    	this.ygap = 2.0;
+        this.xgap = 1.0;
+    	this.ygap = 1.0;
     	this.lineWidth = 0.1;
     	this.lineColor = vec4.fromValues(0.1,0.5,0.1,1.0);
     	this.gapColor = vec4.fromValues( 0.9,0.9,0.9,1.0);
