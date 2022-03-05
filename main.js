@@ -116,6 +116,9 @@ function drawPreview(gl) {
     for(var item of scene.items) {
         item.drawPreview(mvpMatrix);
     }
+    for(var light of scene.lights) {
+        light.drawPreview(mvpMatrix);
+    }
 }
 
 function drawTextureMap(gl) {

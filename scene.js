@@ -1,6 +1,6 @@
 class Hit {
     constructor() {
-        this.geometry;
+        this.geometry = new Geometry();
         this.t0 = 1e12;
         
         this.position = vec4.create();
@@ -15,12 +15,11 @@ class Hit {
 class HitList {
     constructor() {
         this.hitPoints = [];
-        var hit = new Hit();
-        this.hitPoints.push(hit)
         this.minIndex = 0;
         this.maxIndex = 0;
         this.max_t0 = 0;
         this.min_t0 = 1e12;
+        this.size = 0;
     }
     insert(hit) {
         const index = this.hitPoints.push(hit) - 1;
@@ -32,6 +31,7 @@ class HitList {
             this.maxIndex = index;
             this.max_t0 = hit.t0;
         }
+        this.size = index+1;
     }
     getMin() {
         return this.hitPoints[this.minIndex];
@@ -55,6 +55,7 @@ class Scene {
         this.rayCam = new Camera();
 
         this.items = [];
+        this.lights = [];
 
         this.skyColor = vec4.fromValues( 0.3,1.0,1.0,1.0);
 
@@ -64,6 +65,11 @@ class Scene {
         this.rayCam.rayPerspective(camController.fovy, camController.aspect, camController.near);
         this.rayCam.rayLookAt(camController.eyePosition, camController.aimPoint, camController.upVector);
         this.setImageBuffer(pic);
+
+        this.lights = [];
+        var light = new Light();
+        light.initVbo(gl);
+        this.lights.push(light);
 
         this.items = [];
         var groundGrid = new Grid();
@@ -89,9 +95,19 @@ class Scene {
         for(const item of this.items) {
             item.trace(eyeRay, hitList);
         }
+        for(const light of this.lights) {
+            light.trace(eyeRay, hitList);
+        }
+        this.findShade(hitList);
     }
     findShade(hitList) {
-
+        if(hitList.size == 0) {
+            var hit = new Hit();
+            hitList.insert(hit);
+        }
+        var closest = hitList.getMin();
+        var material = closest.geometry.getMaterial(closest.modelSpacePos[0], closest.modelSpacePos[1], closest.modelSpacePos[2]);
+        closest.color = vec4.fromValues(material.Ki[0], material.Ki[1], material.Ki[2], 1);
     }
     makeRayTracedImage(camController) {
         this.rayCam.rayPerspective(camController.fovy, camController.aspect, camController.near);
@@ -101,30 +117,32 @@ class Scene {
         for(let i = 0; i < this.imageBuffer.xSize; i++) {
             for(let j = 0; j < this.imageBuffer.ySize; j++) {
                 if(this.AAtype == antiAliasing.none) {
-                    var hitlist = new HitList();
+                    var hitList = new HitList();
 
                     this.rayCam.setEyeRay(this.eyeRay, i+.5, j+.5);
-                    this.traceRay(this.eyeRay, hitlist);
+                    this.traceRay(this.eyeRay, hitList);
     
                     const index = (j * this.imageBuffer.xSize + i) * 4;
-                    this.imageBuffer.floatBuffer[index] = hitlist.getMin().color[0];
-                    this.imageBuffer.floatBuffer[index+1] = hitlist.getMin().color[1];
-                    this.imageBuffer.floatBuffer[index+2] = hitlist.getMin().color[2];
-                    this.imageBuffer.floatBuffer[index+3] = hitlist.getMin().color[3];
+                    
+                    this.imageBuffer.floatBuffer[index] = hitList.getMin().color[0];
+                    this.imageBuffer.floatBuffer[index+1] = hitList.getMin().color[1];
+                    this.imageBuffer.floatBuffer[index+2] = hitList.getMin().color[2];
+                    this.imageBuffer.floatBuffer[index+3] = hitList.getMin().color[3];
                 }
                 else if(this.AAtype == antiAliasing.jitteredSS) {
                     for(let k = 0; k < 4; k++) {
                         for(let m = 0; m < 4; m++) {
-                            var hitlist = new HitList();
+                            var hitList = new HitList();
                             this.rayCam.setEyeRay(this.eyeRay, i+.25*k+.5*(Math.random()-1), j+.25*m+.5*(Math.random()-1));
 
-                            this.traceRay(this.eyeRay, hitlist);
+                            this.traceRay(this.eyeRay, hitList);
 
                             const index = (j * this.imageBuffer.xSize + i) * 4;
-                            this.imageBuffer.floatBuffer[index] += .0625*hitlist.getMin().color[0];
-                            this.imageBuffer.floatBuffer[index+1] += .0625*hitlist.getMin().color[1];
-                            this.imageBuffer.floatBuffer[index+2] += .0625*hitlist.getMin().color[2];
-                            this.imageBuffer.floatBuffer[index+3] += .0625*hitlist.getMin().color[3];
+                            
+                            this.imageBuffer.floatBuffer[index] += .0625*hitList.getMin().color[0];
+                            this.imageBuffer.floatBuffer[index+1] += .0625*hitList.getMin().color[1];
+                            this.imageBuffer.floatBuffer[index+2] += .0625*hitList.getMin().color[2];
+                            this.imageBuffer.floatBuffer[index+3] += .0625*hitList.getMin().color[3];
                         }
                     }
                 }

@@ -1,3 +1,12 @@
+class Material {
+    constructor (Ka, Ki, Ks, s) {
+        this.Ka = Ka;
+        this.Ki = Ki;
+        this.Ks = Ks;
+        this.s = s;
+    }
+}
+
 const shapeTypes = {
     none : 0,
     grid : 1,
@@ -15,6 +24,11 @@ class Geometry {
     }
     initVbo(gl) {
         
+    }
+    //given x, y, z coordinates in model space, return material value
+    getMaterial(x, y, z) {
+        var material = new Material([0,0,0], [.3, 1, 1], [0,0,0], 0);
+        return material;
     }
     setIdentity() {
         mat4.setIdentity(this.modelMatrix);
@@ -34,7 +48,7 @@ class Geometry {
         mat4.transpose(this.normalToWorld, this.worldToModel);
     }
 
-    //rotate by angle in degrees about vector (x,y,z)
+    //rotate by angle (in degrees) about vector (x,y,z)
     rayRotate(angle, ax, ay, az) {
         const radians = angle*Math.PI/180;
         mat4.rotate(this.modelMatrix, this.modelMatrix, radians, vec3.fromValues(ax,ay,az));
@@ -94,10 +108,12 @@ class Geometry {
     }
 
     drawPreview(mvpMatrix) {
-        this.vboBox.switchToMe();
-        this.vboBox.adjust(this.modelMatrix, mvpMatrix);
-        this.vboBox.reload();
-        this.vboBox.draw();
+        if(this.vboBox.vboContents) {
+            this.vboBox.switchToMe();
+            this.vboBox.adjust(this.modelMatrix, mvpMatrix);
+            this.vboBox.reload();
+            this.vboBox.draw();
+        }
     }
 }
 
@@ -115,6 +131,18 @@ class Grid extends Geometry {
     initVbo(gl) {
         this.vboBox.init(gl, makeGroundGrid(), 404);
     }
+    getMaterial(x, y, z) {
+        var xfrac = Math.abs(x) / this.xgap;
+        var yfrac = Math.abs(y) / this.ygap;
+        if(xfrac % 1 >= this.lineWidth && yfrac % 1 >= this.lineWidth) {
+            var material = new Material([0,0,0], [this.gapColor[0], this.gapColor[1], this.gapColor[2]], [0,0,0], 0);
+            return material;
+        }
+        else {
+            var material = new Material([0,0,0], [this.lineColor[0], this.lineColor[1], this.lineColor[2]], [0,0,0], 0);
+            return material;
+        }
+    }
     trace(inRay, hitList) {
         var ray = new Ray();
 
@@ -131,14 +159,6 @@ class Grid extends Geometry {
             vec4.scaleAndAdd(hit.modelSpacePos, ray.origin, ray.dir, t0);
             vec4.scaleAndAdd(hit.position, inRay.origin, inRay.dir, t0);
 
-            var xfrac = Math.abs(hit.modelSpacePos[0]) / this.xgap;
-            var yfrac = Math.abs(hit.modelSpacePos[1]) / this.ygap;
-            if(xfrac % 1 >= this.lineWidth && yfrac % 1 >= this.lineWidth) {
-                hit.color = this.gapColor;
-            }
-            else {
-                hit.color = this.lineColor;
-            }
             hitList.insert(hit);
         }
     }
@@ -152,6 +172,10 @@ class Disk extends Geometry {
     }
     initVbo(gl) {
         this.vboBox.init(gl, makeDisk(this.radius), 20*this.radius+4)
+    }
+    getMaterial(x, y, z) {
+        var material = new Material([0,0,0], [1, 0, 0], [0,0,0], 0);
+        return material;
     }
     trace(inRay, hitList) {
         var ray = new Ray();
@@ -169,11 +193,6 @@ class Disk extends Geometry {
             hit.geometry = this;
             hit.t0 = t0;
 
-            vec4.scaleAndAdd(hit.position, inRay.origin, inRay.dir, t0);
-
-            var xfrac = Math.abs(hit.modelSpacePos[0]) / this.xgap;
-            var yfrac = Math.abs(hit.modelSpacePos[1]) / this.ygap;
-            hit.color = vec4.fromValues(1, 0, 0, 1);
             hitList.insert(hit);
         }
     }
@@ -186,8 +205,12 @@ class Sphere extends Geometry {
         this.shapeType = shapeTypes.sphere;
     }
     initVbo(gl) {
-        this.vboBox.init(gl, makeSphere(13), 676);
+        this.vboBox.init(gl, makeSphere(13, [0, 0, 1]), 676);
         this.vboBox.drawMode = gl.LINE_STRIP;
+    }
+    getMaterial(x, y, z) {
+        var material = new Material([0,0,0], [0, 0, 1], [0,0,0], 0);
+        return material;
     }
     trace(inRay, hitList) {
         var ray = new Ray();
@@ -198,17 +221,28 @@ class Sphere extends Geometry {
         var r2s = vec4.create();
         vec4.subtract(r2s, vec4.fromValues(0,0,0,1), ray.origin);
         var L2 = vec3.dot(r2s,r2s);
+        var tcaS = vec3.dot(ray.dir, r2s);
 
+        //rays originating inside sphere
         if(L2 <= 1) {
+            var DL2 = vec3.dot(ray.dir, ray.dir);
+            var tca2 = tcaS*tcaS/DL2;
+
+            var LM2 = L2 - tca2;
+
+            var L2hc = 1-LM2;
+            var t0 = tcaS/DL2 + Math.sqrt(L2hc/DL2);
+
             var hit = new Hit();
+            hit.t0 = t0;
             hit.isEntry = false;
             hit.geometry = this;
-            hit.color = vec4.fromValues(0, 0, 1, 1);
+
             hitList.insert(hit);
         }
-
-        var tcaS = vec3.dot(ray.dir, r2s);
-        if(tcaS >= 0) {
+     
+        //rays originating outside sphere. if tcaS < 0, the sphere is behind the camera
+        else if(tcaS >= 0) {
             var DL2 = vec3.dot(ray.dir, ray.dir);
             var tca2 = tcaS*tcaS/DL2;
 
@@ -221,16 +255,31 @@ class Sphere extends Geometry {
                 var firstHit = new Hit();
                 firstHit.t0 = t0;
                 firstHit.geometry = this;
-                firstHit.color = vec4.fromValues(0,0,1,1);
+
                 hitList.insert(firstHit);
 
                 var secondHit = new Hit();
                 secondHit.t0 = t1;
                 secondHit.geometry = this;
                 secondHit.isEntry = false;
-                secondHit.color = vec4.fromValues(0, 0, 1, 1);
+
                 hitList.insert(secondHit);
             }
         }
+    }
+}
+
+class Light extends Sphere {
+    constructor (x = 0, y = 0, z = 100) {
+        super(.1);
+        this.Ia = [1,1,1];
+        this.Id = [1,1,1];
+        this.Is = [1,1,1];
+
+        this.rayTranslate(x, y, z);
+    }
+    initVbo(gl) {
+        this.vboBox.init(gl, makeSphere(13, [1,1,1]), 676);
+        this.vboBox.drawMode = gl.LINE_STRIP;
     }
 }
