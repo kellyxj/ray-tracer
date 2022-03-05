@@ -1,7 +1,8 @@
 const shapeTypes = {
     none : 0,
     grid : 1,
-    disk : 2
+    disk : 2,
+    sphere: 3
 }
 
 class Geometry {
@@ -138,15 +139,15 @@ class Grid extends Geometry {
             else {
                 hit.color = this.lineColor;
             }
+            hitList.insert(hit);
         }
-        hitList.insert(hit);
     }
 }
 
 class Disk extends Geometry {
-    constructor() {
+    constructor(r = 2) {
         super();
-        this.radius = 2;
+        this.radius = r;
         this.shapeType = shapeTypes.disk;
     }
     initVbo(gl) {
@@ -173,16 +174,63 @@ class Disk extends Geometry {
             var xfrac = Math.abs(hit.modelSpacePos[0]) / this.xgap;
             var yfrac = Math.abs(hit.modelSpacePos[1]) / this.ygap;
             hit.color = vec4.fromValues(1, 0, 0, 1);
+            hitList.insert(hit);
         }
-        hitList.insert(hit);
     }
 }
 
 class Sphere extends Geometry {
-    initVbo(gl) {
-        
+    constructor(r = 1) {
+        super();
+        this.radius = r;
+        this.shapeType = shapeTypes.sphere;
     }
-    trace() {
+    initVbo(gl) {
+        this.vboBox.init(gl, makeSphere(13), 676);
+        this.vboBox.drawMode = gl.LINE_STRIP;
+    }
+    trace(inRay, hitList) {
+        var ray = new Ray();
 
+        vec4.transformMat4(ray.origin, inRay.origin, this.worldToModel);
+        vec4.transformMat4(ray.dir, inRay.dir, this.worldToModel);
+
+        var r2s = vec4.create();
+        vec4.subtract(r2s, vec4.fromValues(0,0,0,1), ray.origin);
+        var L2 = vec3.dot(r2s,r2s);
+
+        if(L2 <= 1) {
+            var hit = new Hit();
+            hit.isEntry = false;
+            hit.geometry = this;
+            hit.color = vec4.fromValues(0, 0, 1, 1);
+            hitList.insert(hit);
+        }
+
+        var tcaS = vec3.dot(ray.dir, r2s);
+        if(tcaS >= 0) {
+            var DL2 = vec3.dot(ray.dir, ray.dir);
+            var tca2 = tcaS*tcaS/DL2;
+
+            var LM2 = L2 - tca2;
+            if(LM2 <= 1) {
+                var L2hc = 1-LM2;
+                var t0 = tcaS/DL2 - Math.sqrt(L2hc/DL2);
+                var t1 = tcaS/DL2 + Math.sqrt(L2hc/DL2);
+
+                var firstHit = new Hit();
+                firstHit.t0 = t0;
+                firstHit.geometry = this;
+                firstHit.color = vec4.fromValues(0,0,1,1);
+                hitList.insert(firstHit);
+
+                var secondHit = new Hit();
+                secondHit.t0 = t1;
+                secondHit.geometry = this;
+                secondHit.isEntry = false;
+                secondHit.color = vec4.fromValues(0, 0, 1, 1);
+                hitList.insert(secondHit);
+            }
+        }
     }
 }

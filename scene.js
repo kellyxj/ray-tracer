@@ -15,6 +15,8 @@ class Hit {
 class HitList {
     constructor() {
         this.hitPoints = [];
+        var hit = new Hit();
+        this.hitPoints.push(hit)
         this.minIndex = 0;
         this.maxIndex = 0;
         this.max_t0 = 0;
@@ -73,6 +75,11 @@ class Scene {
         disk.rayRotate(90, 0, 1, 0);
         disk.initVbo(gl);
         this.items.push(disk);
+
+        var sphere = new Sphere();
+        sphere.rayTranslate(2, 0, 1);
+        sphere.initVbo(gl);
+        this.items.push(sphere);
     }
     setImageBuffer(newImage) {
         this.rayCam.setSize(newImage.xSize, newImage.ySize);

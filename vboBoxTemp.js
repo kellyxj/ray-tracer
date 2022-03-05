@@ -457,3 +457,98 @@ function makeDisk(rad) {
         }
     return vertSet;
 }
+
+polar2xyz = function(out4, fracEW, fracNS) {
+      var sEW = Math.sin(2.0*Math.PI*fracEW);
+      var cEW = Math.cos(2.0*Math.PI*fracEW);
+      var sNS = Math.sin(Math.PI*fracNS);
+      var cNS = Math.cos(Math.PI*fracNS);
+      vec4.set(out4,  cEW * sNS, 
+                      sEW * sNS,
+                      cNS, 1.0);
+    }
+
+makeSphere = function(NScount) {
+    if(NScount == undefined) NScount =  13;    // default value.
+    if(NScount < 3) NScount = 3;              // enforce minimums
+    var EWcount = 2*(NScount);
+
+    const floatsPerVertex = 8;
+    
+    var vertCount = 2* EWcount * NScount;
+    var vertSet = new Float32Array(vertCount * floatsPerVertex); 
+
+    var EWbgnColr = vec4.fromValues(1.0, 0.5, 0.0, 1.0);	  // Orange
+    var EWendColr = vec4.fromValues(0.0, 0.5, 1.0, 1.0);   // Cyan
+    var NSbgnColr = vec4.fromValues(1.0, 1.0, 1.0, 1.0);	  // White
+    var NSendColr = vec4.fromValues(0.0, 1.0, 0.5, 1.0);   // White
+    
+
+    var EWcolrStep = vec4.create();
+    var NScolrStep = vec4.create();
+    
+    vec4.subtract(EWcolrStep, EWendColr, EWbgnColr); // End - Bgn
+    vec4.subtract(NScolrStep, NSendColr, NSbgnColr);
+    vec4.scale(EWcolrStep, EWcolrStep, 2.0/(EWcount -1)); // double-step for arc colors
+    vec4.scale(NScolrStep, NScolrStep, 1.0/(NScount -1)); // single-step for ring colors
+    
+
+    var EWgap = 1.0/(EWcount-1);
+                                           
+    var NSgap = 1.0/(NScount-1);		
+    var EWint=0; 
+    var NSint=0;
+    var v = 0;
+    var idx = 0; 
+    var pos = vec4.create();  
+    var colrNow = vec4.create(); 
+    
+      //----------------------------------------------------------------------------
+      // 1st BIG LOOP: makes all horizontal rings of constant NSfrac.
+    for(NSint=0; NSint<NScount; NSint++) { // for every ring of constant NSfrac,
+        colrNow = vec4.scaleAndAdd(               // find the color of this ring;
+                  colrNow, NSbgnColr, NScolrStep, NSint);	  
+        for(EWint=0; EWint<EWcount; EWint++, v++, idx += floatsPerVertex) { 
+            polar2xyz(pos,
+            EWint * EWgap,
+            NSint * NSgap); 
+            vertSet[idx  ] = pos[0];            // x value
+            vertSet[idx+1] = pos[1];            // y value
+            vertSet[idx+2] = pos[2];            // z value
+            vertSet[idx+3] = 1.0;               // w (it's a point, not a vector)
+            vertSet[idx+4] = colrNow[0];  // r
+            vertSet[idx+5] = colrNow[1];  // g
+            vertSet[idx+6] = colrNow[2];  // b
+            vertSet[idx+7] = colrNow[3];  // a;
+        }
+    }
+    
+      //----------------------------------------------------------------------------
+      // 2nd BIG LOOP: makes all vertical arcs of constant EWfrac.
+    for(EWint=0; EWint<EWcount; EWint++) { // for every arc of constant EWfrac,
+        // find color of the arc:
+        if(EWint < EWcount/2) {   // color INCREASES for first hemisphere of arcs:        
+          colrNow = vec4.scaleAndAdd(             
+                  colrNow, EWbgnColr, EWcolrStep, EWint);
+        }
+        else {  // color DECREASES for second hemisphere of arcs:
+          colrNow = vec4.scaleAndAdd(             
+                  colrNow, EWbgnColr, EWcolrStep, EWcount - EWint);
+        }  	  
+        for(NSint=0; NSint<NScount; NSint++, v++, idx += floatsPerVertex) { 
+            polar2xyz(pos, // vec4 that holds vertex position in world-space x,y,z;
+            EWint * EWgap,  // normalized East/west longitude (from 0 to 1)
+            NSint * NSgap); // normalized North/South lattitude (from 0 to 1)      
+          // now set the vertex values in the array:
+          vertSet[idx  ] = pos[0];            // x value
+          vertSet[idx+1] = pos[1];            // y value
+          vertSet[idx+2] = pos[2];            // z value
+          vertSet[idx+3] = 1.0;               // w (it's a point, not a vector)
+          vertSet[idx+4] = colrNow[0];  // r
+          vertSet[idx+5] = colrNow[1];  // g
+          vertSet[idx+6] = colrNow[2];  // b
+          vertSet[idx+7] = colrNow[3];  // a;
+        }
+      }
+      return vertSet;
+    }

@@ -6,7 +6,7 @@ var g_timeStep = 1000/60;
 var g_last = Date.now();
 
 //handles user interface for camera controls
-var cameraController = new CameraController([-30, 0, 2], 0, 0, false, 45, 1, 100);
+var cameraController = new CameraController([-10, 0, 2], 0, 0, false, 45, 1, 100);
 
 function main() {
 
@@ -71,7 +71,7 @@ function main() {
     scene.makeRayTracedImage(cameraController);
     rayView.switchToMe();
     rayView.reload(imageBuffer);
-    
+
     var tick = function() {
         g_timeStep = animate();
         drawAll(gl);
