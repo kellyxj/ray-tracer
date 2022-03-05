@@ -68,6 +68,10 @@ function main() {
     imageBuffer.setTestPattern();
 
     rayView.init(gl, imageBuffer);
+    scene.makeRayTracedImage(cameraController);
+    rayView.switchToMe();
+    rayView.reload(imageBuffer);
+    
     var tick = function() {
         g_timeStep = animate();
         drawAll(gl);

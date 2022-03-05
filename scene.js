@@ -69,7 +69,10 @@ class Scene {
         this.items.push(groundGrid);
 
         var disk = new Disk();
-        //this.items.push(disk);
+        disk.rayTranslate(0,0,3);
+        disk.rayRotate(90, 0, 1, 0);
+        disk.initVbo(gl);
+        this.items.push(disk);
     }
     setImageBuffer(newImage) {
         this.rayCam.setSize(newImage.xSize, newImage.ySize);

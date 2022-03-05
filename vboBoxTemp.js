@@ -387,4 +387,73 @@ function makeGroundGrid() {
           gndVerts[j+7] = xColr[3];
       }
     return gndVerts;
-  }
+}
+
+function makeDisk(rad) {
+    if(rad == undefined) rad = 3;   // default value.
+    //Set # of lines in grid--------------------------------------
+    var xyMax	= rad;
+    var xCount = rad*5 +1;
+    var yCount = rad*5 +1;
+                                                      
+    var vertsPerLine =2;
+
+    var vertCount = (xCount + yCount) * vertsPerLine;
+    const floatsPerVertex = 8;
+    var vertSet = new Float32Array(vertCount * floatsPerVertex); 
+
+    var xColr = vec4.fromValues(1.0, 1.0, 0.3, 1.0);	   // Light Yellow
+    var yColr = vec4.fromValues(0.3, 1.0, 1.0, 1.0);    // Light Cyan
+        
+          // Local vars for vertex-making loops-------------------
+    var xgap = 2*xyMax/(xCount-2);		// Spacing between lines in x,y;
+    var ygap = 2*xyMax/(yCount-2);		// (why 2*xyMax? grid spans +/- xyMax).
+    var xNow;           // x-value of the current line we're drawing
+    var yNow;           // y-value of the current line we're drawing.
+    var diff;           // half-length of each line we draw.
+    var line = 0;       // line-number (we will draw xCount or yCount lines, each
+                              // made of vertsPerLine vertices),
+    var v = 0;          // vertex-counter, used for the entire grid;
+    var idx = 0;        // vertSet[] array index.
+    //----------------------------------------------------------------------------
+    // 1st BIG LOOP: makes all lines of constant-x
+    for(line=0; line<xCount; line++) {   // for every line of constant x,
+        xNow = -xyMax + (line+0.5)*xgap;       // find the x-value of this line,    
+         diff = Math.sqrt(rad*rad - xNow*xNow);  // find +/- y-value of this line,
+        for(i=0; i<vertsPerLine; i++, v++, idx += floatsPerVertex) { 
+            if(i==0) yNow = -diff;  // line start
+            else yNow = diff;       // line end.
+              // set all values for this vertex:
+            vertSet[idx  ] = xNow;            // x value
+            vertSet[idx+1] = yNow;            // y value
+            vertSet[idx+2] = 0.0;             // z value
+            vertSet[idx+3] = 1.0;             // w;
+            vertSet[idx+4] = xColr[0];  // r
+            vertSet[idx+5] = xColr[1];  // g
+            vertSet[idx+6] = xColr[2];  // b
+            vertSet[idx+7] = xColr[3];  // a;
+        }
+    }
+          //---------------------------------------------------------------------------
+          // 2nd BIG LOOP: makes all lines of constant-y
+    for(line=0; line<yCount; line++) {   // for every line of constant y,
+        yNow = -xyMax + (line+0.5)*ygap;       // find the y-value of this line,  
+        diff = Math.sqrt(rad*rad - yNow*yNow);  // find +/- y-value of this line,  
+        for(i=0; i<vertsPerLine; i++, v++, idx += floatsPerVertex) { 
+              // and store them sequentially in vertSet[] array.
+              // We already know  yNow; find the xNow:
+              if(i==0) xNow = -diff;  // line start
+              else xNow = diff;       // line end.
+              // Set all values for this vertex:
+              vertSet[idx  ] = xNow;            // x value
+              vertSet[idx+1] = yNow;            // y value
+              vertSet[idx+2] = 0.0;             // z value
+              vertSet[idx+3] = 1.0;             // w;
+              vertSet[idx+4] = yColr[0];  // r
+              vertSet[idx+5] = yColr[1];  // g
+              vertSet[idx+6] = yColr[2];  // b
+              vertSet[idx+7] = yColr[3];  // a;
+            }
+        }
+    return vertSet;
+}
