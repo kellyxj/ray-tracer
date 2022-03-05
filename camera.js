@@ -1,7 +1,7 @@
 class Ray {
     constructor() {
-        this.origin = vec4.fromValues(0,0,0,1);
-        this.dir = 	vec4.fromValues(0,0,-1,0);
+        this.origin = vec4.create();
+        this.dir = 	vec4.create();
     }
 }
 
@@ -50,7 +50,7 @@ class Camera {
     }
 
     rayLookAt(eyePoint, aimPoint, upVec) {
-        this.eyePoint = eyePoint;
+        vec4.copy(this.eyePoint, eyePoint);
         vec4.subtract(this.nAxis, this.eyePoint, aimPoint);
         vec4.normalize(this.nAxis, this.nAxis);
 

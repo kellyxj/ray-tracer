@@ -1,7 +1,7 @@
 class Material {
-    constructor (Ka, Ki, Ks, s) {
+    constructor (Ka, Kd, Ks, s) {
         this.Ka = Ka;
-        this.Ki = Ki;
+        this.Kd = Kd;
         this.Ks = Ks;
         this.s = s;
     }
@@ -11,7 +11,8 @@ const shapeTypes = {
     none : 0,
     grid : 1,
     disk : 2,
-    sphere: 3
+    sphere: 3,
+    light: 4
 }
 
 class Geometry {
@@ -29,6 +30,10 @@ class Geometry {
     getMaterial(x, y, z) {
         var material = new Material([0,0,0], [.3, 1, 1], [0,0,0], 0);
         return material;
+    }
+    //given x, y, z coordinates in model space, return world space normal
+    getNormal(x, y, z) {
+
     }
     setIdentity() {
         mat4.setIdentity(this.modelMatrix);
@@ -135,13 +140,18 @@ class Grid extends Geometry {
         var xfrac = Math.abs(x) / this.xgap;
         var yfrac = Math.abs(y) / this.ygap;
         if(xfrac % 1 >= this.lineWidth && yfrac % 1 >= this.lineWidth) {
-            var material = new Material([0,0,0], [this.gapColor[0], this.gapColor[1], this.gapColor[2]], [0,0,0], 0);
+            var material = new Material([.1,.1,.1], [this.gapColor[0], this.gapColor[1], this.gapColor[2]], [0,0,0], 0);
             return material;
         }
         else {
-            var material = new Material([0,0,0], [this.lineColor[0], this.lineColor[1], this.lineColor[2]], [0,0,0], 0);
+            var material = new Material([.1,.1,.1], [this.lineColor[0], this.lineColor[1], this.lineColor[2]], [0,0,0], 0);
             return material;
         }
+    }
+    getNormal(x,y,z) {
+        var normVec = vec4.fromValues(0, 0, 1, 0);
+        vec4.transformMat4(normVec, normVec, this.normalToWorld);
+        return normVec;
     }
     trace(inRay, hitList) {
         var ray = new Ray();
@@ -159,6 +169,9 @@ class Grid extends Geometry {
             vec4.scaleAndAdd(hit.modelSpacePos, ray.origin, ray.dir, t0);
             vec4.scaleAndAdd(hit.position, inRay.origin, inRay.dir, t0);
 
+            hit.normal = vec4.create();
+            vec4.copy(hit.normal, this.getNormal(hit.modelSpacePos[0], hit.modelSpacePos[1], hit.modelSpacePos[2]));
+
             hitList.insert(hit);
         }
     }
@@ -174,8 +187,13 @@ class Disk extends Geometry {
         this.vboBox.init(gl, makeDisk(this.radius), 20*this.radius+4)
     }
     getMaterial(x, y, z) {
-        var material = new Material([0,0,0], [1, 0, 0], [0,0,0], 0);
+        var material = new Material([.1,.1,.1], [1, 0, 0], [1,1,1], 50);
         return material;
+    }
+    getNormal(x,y,z) {
+        var normVec = vec4.fromValues(0, 0, 1, 0);
+        vec4.transformMat4(normVec, normVec, this.normalToWorld);
+        return normVec;
     }
     trace(inRay, hitList) {
         var ray = new Ray();
@@ -193,6 +211,12 @@ class Disk extends Geometry {
             hit.geometry = this;
             hit.t0 = t0;
 
+            vec4.scaleAndAdd(hit.modelSpacePos, ray.origin, ray.dir, t0);
+            vec4.scaleAndAdd(hit.position, inRay.origin, inRay.dir, t0);
+
+            hit.normal = vec4.create();
+            vec4.copy(hit.normal, this.getNormal(hit.modelSpacePos[0], hit.modelSpacePos[1], hit.modelSpacePos[2]));
+
             hitList.insert(hit);
         }
     }
@@ -209,8 +233,13 @@ class Sphere extends Geometry {
         this.vboBox.drawMode = gl.LINE_STRIP;
     }
     getMaterial(x, y, z) {
-        var material = new Material([0,0,0], [0, 0, 1], [0,0,0], 0);
+        var material = new Material([.1,.1,.1], [0, 0, 1], [1,1,1], 50);
         return material;
+    }
+    getNormal(x,y,z) {
+        var normVec = vec4.fromValues(x, y, z, 0);
+        vec4.transformMat4(normVec, normVec, this.normalToWorld);
+        return normVec;
     }
     trace(inRay, hitList) {
         var ray = new Ray();
@@ -238,6 +267,12 @@ class Sphere extends Geometry {
             hit.isEntry = false;
             hit.geometry = this;
 
+            vec4.scaleAndAdd(hit.modelSpacePos, ray.origin, ray.dir, t0);
+            vec4.scaleAndAdd(hit.position, inRay.origin, inRay.dir, t0);
+
+            hit.normal = vec4.create();
+            vec4.copy(hit.normal, this.getNormal(hit.modelSpacePos[0], hit.modelSpacePos[1], hit.modelSpacePos[2]));
+
             hitList.insert(hit);
         }
      
@@ -256,12 +291,24 @@ class Sphere extends Geometry {
                 firstHit.t0 = t0;
                 firstHit.geometry = this;
 
+                vec4.scaleAndAdd(firstHit.modelSpacePos, ray.origin, ray.dir, t0);
+                vec4.scaleAndAdd(firstHit.position, inRay.origin, inRay.dir, t0);
+
+                firstHit.normal = vec4.create();
+                vec4.copy(firstHit.normal, this.getNormal(firstHit.modelSpacePos[0], firstHit.modelSpacePos[1], firstHit.modelSpacePos[2]));
+
                 hitList.insert(firstHit);
 
                 var secondHit = new Hit();
                 secondHit.t0 = t1;
                 secondHit.geometry = this;
                 secondHit.isEntry = false;
+
+                vec4.scaleAndAdd(secondHit.modelSpacePos, ray.origin, ray.dir, t1);
+                vec4.scaleAndAdd(secondHit.position, inRay.origin, inRay.dir, t1);
+
+                secondHit.normal = vec4.create();
+                vec4.copy(secondHit.normal, this.getNormal(secondHit.modelSpacePos[0], secondHit.modelSpacePos[1], secondHit.modelSpacePos[2]));
 
                 hitList.insert(secondHit);
             }
@@ -272,11 +319,16 @@ class Sphere extends Geometry {
 class Light extends Sphere {
     constructor (x = 0, y = 0, z = 100) {
         super(.1);
-        this.Ia = [1,1,1];
+        this.shapeType = shapeTypes.light;
+        this.Ia = [.1,.1,.1];
         this.Id = [1,1,1];
         this.Is = [1,1,1];
 
         this.rayTranslate(x, y, z);
+    }
+    getMaterial(x,y,z) {
+        var material = new Material([0, 0, 0], [1, 1, 1], [0,0,0] ,0);
+        return material;
     }
     initVbo(gl) {
         this.vboBox.init(gl, makeSphere(13, [1,1,1]), 676);

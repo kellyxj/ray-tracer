@@ -72,6 +72,8 @@ function main() {
     rayView.switchToMe();
     rayView.reload(imageBuffer);
 
+    drawAll(gl);
+
     var tick = function() {
         g_timeStep = animate();
         drawAll(gl);
