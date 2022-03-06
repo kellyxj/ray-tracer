@@ -60,7 +60,7 @@ const antiAliasing = {
 
 class Scene {
     constructor() {
-        this.epsilon = 1e-4;
+        this.epsilon = 1e-6;
         this.imageBuffer;
 
         this.eyeRay = new Ray();
@@ -69,11 +69,10 @@ class Scene {
         this.items = [];
         this.lights = [];
 
-        this.skyColor = vec4.fromValues( 0.3,1.0,1.0,1.0);
-
         this.AAtype = antiAliasing.none;
 
         this.recursionDepth = 1;
+        this.sampleRate = 4;
     }
     init(gl, pic, camController) {
         this.rayCam.rayPerspective(camController.fovy, camController.aspect, camController.near);
@@ -81,40 +80,68 @@ class Scene {
         this.setImageBuffer(pic);
 
         this.lights = [];
-        var light = new Light();
+
+        var light = new Light(20, 0, 1, 10);
         light.initVbo(gl);
         this.lights.push(light);
 
-        this.items = [];
-        var groundGrid = new Grid();
-        groundGrid.initVbo(gl);
-        this.items.push(groundGrid);
+        var light2 = new Light(-20, 0, 1, 5);
+        light2.initVbo(gl);
+        this.lights.push(light2);
 
-        var disk = new Disk();
-        disk.rayTranslate(0,0,3);
-        disk.rayRotate(45, 0, 1, 0);
-        disk.initVbo(gl);
-        this.items.push(disk);
+        var light2 = new Light(0, 20, 5, 3);
+        light2.initVbo(gl);
+        this.lights.push(light2);
+
+        this.items = [];
+        //var groundGrid = new Grid();
+        //groundGrid.initVbo(gl);
+        //this.items.push(groundGrid);
 
         var sphere = new Sphere();
-        sphere.rayTranslate(-1, 0, 1);
+        sphere.rayTranslate(-3, 0, 1);
         sphere.initVbo(gl);
         this.items.push(sphere);
+
+        var sphere2 = new Sphere();
+        sphere2.rayTranslate(0, 0, 1);
+        sphere2.initVbo(gl);
+        this.items.push(sphere2);
+
+        var sphere3 = new Sphere();
+        sphere3.rayTranslate(0, 3, 1);
+        sphere3.initVbo(gl);
+        this.items.push(sphere3);
+
+        var disk = new Disk();
+        disk.rayTranslate(0, -4, 1);
+        disk.rayRotate(90, 1, 0, 0);
+        disk.initVbo(gl);
+        this.items.push(disk);
+        
+        var disk2 = new Disk();
+        disk2.rayTranslate(4, 4, 1);
+        disk2.rayRotate(90, 0, 1, 0);
+        disk2.rayRotate(-45, 1, 0, 0);
+        disk2.initVbo(gl);
+        this.items.push(disk2);
     }
     setImageBuffer(newImage) {
         this.rayCam.setSize(newImage.xSize, newImage.ySize);
         this.imageBuffer = newImage;
     }
-    traceRay(eyeRay, hitList, depth) {
+    traceRay(eyeRay, hitList, depth, inShadow) {
         for(const item of this.items) {
             item.trace(eyeRay, hitList);
         }
         for(const light of this.lights) {
             light.trace(eyeRay, hitList);
         }
-        this.findShade(hitList, depth);
+        if(!inShadow) {
+            this.findShade(hitList, depth, inShadow);
+        }
     }
-    findShade(hitList, depth) {
+    findShade(hitList, depth, inShadow) {
         if(hitList.size == 0) {
             var hit = new Hit();
             hitList.insert(hit);
@@ -126,7 +153,7 @@ class Scene {
         vec4.subtract(closest.viewVec, this.rayCam.eyePoint, closest.position);
         vec4.normalize(closest.viewVec, closest.viewVec);
 
-        if(closest.geometry.shapeType == shapeTypes.light || closest.geometry.shapeType == shapeTypes.none) {
+        if(closest.geometry.shapeType == shapeTypes.none || closest.geometry.shapeType == shapeTypes.light ) {
             closest.color = vec4.fromValues(material.Kd[0], material.Kd[1], material.Kd[2], 1);
         }
         else {
@@ -147,37 +174,79 @@ class Scene {
                 vec4.scaleAndAdd(shadowRay.origin, shadowRay.origin, closest.viewVec, this.epsilon);
     
                 var shadowRayHitList = new HitList();
-                if(depth < this.recursionDepth) {
-                    this.traceRay(shadowRay, shadowRayHitList, depth+1);
-                }
+                this.traceRay(shadowRay, shadowRayHitList, depth+1, true);
+
+                var d = Math.sqrt(vec4.dot(L,L));
                 
-                if(shadowRayHitList.getMin().geometry.shapeType == shapeTypes.none || shadowRayHitList.getMin().geometry.shapeType == shapeTypes.light) {
+                //direct illumination case
+                if(shadowRayHitList.getMin().geometry.shapeType == shapeTypes.none || shadowRayHitList.getMin().geometry.shapeType == shapeTypes.light ) {
                     var N = vec4.create();
                     vec4.copy(N, closest.normal);
                     var C = vec4.create();
-                    let lambertian = vec4.dot(L,N);
-                    vec4.scale(C, N, lambertian);
+                    vec4.scale(C, N, vec4.dot(L,N));
                     var R = vec4.create();
                     vec4.scale(R, C, 2);
                     vec4.subtract(R, R, L);
-                    var V = vec4.create();
-                    vec4.copy(V, closest.viewVec);
-
-                    vec4.normalize(L, L);
                     vec4.normalize(R, R);
-                    lambertian = vec4.dot(L,N);
+                    vec4.normalize(L, L);
+                    const lambertian = vec4.dot(L,N);
 
-                    closest.color[0] += light.Id[0] * material.Kd[0]*Math.max(0, lambertian);
-                    closest.color[1] += light.Id[1] * material.Kd[1]*Math.max(0, lambertian);
-                    closest.color[2] += light.Id[2] * material.Kd[2]*Math.max(0, lambertian);
+                    var attenuation = 1;
 
-                    closest.color[0] += light.Is[0] * material.Ks[0]* Math.pow(Math.max(0, vec4.dot(R,V)),material.s);
-                    closest.color[1] += light.Is[1] * material.Ks[1]* Math.pow(Math.max(0, vec4.dot(R,V)),material.s);
-                    closest.color[2] += light.Is[2] * material.Ks[2]* Math.pow(Math.max(0, vec4.dot(R,V)),material.s);
+                    if(closest.geometry.shapeType != shapeTypes.grid) {
+                        attenuation = 1/d;
+                    }
+
+                    closest.color[0] += attenuation*light.brightness*light.Id[0] * material.Kd[0]*Math.max(0, lambertian);
+                    closest.color[1] += attenuation*light.brightness*light.Id[1] * material.Kd[1]*Math.max(0, lambertian);
+                    closest.color[2] += attenuation*light.brightness*light.Id[2] * material.Kd[2]*Math.max(0, lambertian);
+
+                    closest.color[0] += attenuation*light.brightness*light.Is[0] * material.Ks[0]* Math.pow(Math.max(0, vec4.dot(R,closest.viewVec)),material.s);
+                    closest.color[1] += attenuation*light.brightness*light.Is[1] * material.Ks[1]* Math.pow(Math.max(0, vec4.dot(R,closest.viewVec)),material.s);
+                    closest.color[2] += attenuation*light.brightness*light.Is[2] * material.Ks[2]* Math.pow(Math.max(0, vec4.dot(R,closest.viewVec)),material.s);
                 }
-                closest.color[0] += light.Ia[0] * material.Ka[0];
-                closest.color[1] += light.Ia[1] * material.Ka[1];
-                closest.color[2] += light.Ia[2] * material.Ka[2];
+            }
+            closest.color[0] += light.Ia[0] * material.Ka[0];
+            closest.color[1] += light.Ia[1] * material.Ka[1];
+            closest.color[2] += light.Ia[2] * material.Ka[2];
+
+            if(closest.geometry.getMaterial().reflectance > 0) {
+                //spawn a reflected ray
+                var reflectedRay = new Ray();
+                var reflectedRayHitList = new HitList();
+
+                vec4.copy(reflectedRay.origin, closest.position);
+                vec4.scaleAndAdd(reflectedRay.origin, reflectedRay.origin, closest.viewVec, this.epsilon);
+                
+                var N = vec4.create();
+                vec4.copy(N, closest.normal);
+                var V = vec4.create();
+                vec4.copy(V, closest.viewVec);
+
+                var C = vec4.create();
+                vec4.scale(C, N, vec4.dot(V, N));
+                var R = vec4.create();
+                vec4.scale(R, C, 2);
+                vec4.subtract(R, R, L);
+                vec4.normalize(R,R);
+
+                vec4.copy(reflectedRay.dir, R);
+
+                if(depth < this.recursionDepth) {
+                    this.traceRay(reflectedRay, reflectedRayHitList, depth+1, inShadow);
+                }
+                var bounceHit = reflectedRayHitList.getMin();
+                var bounceMat = bounceHit.geometry.getMaterial(bounceHit.modelSpacePos[0], bounceHit.modelSpacePos[1], bounceHit.modelSpacePos[2]);
+                if(bounceHit.geometry.shapeType == shapeTypes.none) {
+                    closest.color[0] += .5*bounceMat.Kd[0];
+                    closest.color[1] += .5*bounceMat.Kd[1];
+                    closest.color[2] += .5*bounceMat.Kd[2];
+                }
+                else {
+                    closest.color[0] += .5*bounceHit.color[0];
+                    closest.color[1] += .5*bounceHit.color[1];
+                    closest.color[2] += .5*bounceHit.color[2];
+                }
             }
         }
     }
@@ -194,7 +263,7 @@ class Scene {
                     var hitList = new HitList();
 
                     this.rayCam.setEyeRay(this.eyeRay, i+.5, j+.5);
-                    this.traceRay(this.eyeRay, hitList, 0);
+                    this.traceRay(this.eyeRay, hitList, 0, false);
     
                     const index = (j * this.imageBuffer.xSize + i) * 4;
                     
@@ -209,7 +278,7 @@ class Scene {
                             var hitList = new HitList();
                             this.rayCam.setEyeRay(this.eyeRay, i+.25*k+.5*(Math.random()-1), j+.25*m+.5*(Math.random()-1));
 
-                            this.traceRay(this.eyeRay, hitList, 0);
+                            this.traceRay(this.eyeRay, hitList, 0, false);
 
                             const index = (j * this.imageBuffer.xSize + i) * 4;
                             

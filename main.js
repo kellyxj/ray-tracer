@@ -21,6 +21,8 @@ function main() {
     gl.clearColor(0.0, 0.0, 0.0, 1.0);
     gl.clear(gl.COLOR_BUFFER_BIT);
 
+    gl.enable(gl.DEPTH_TEST);
+
     document.addEventListener("keydown", (e) => {
         if(e.key == "w") {
             cameraController.moveForward();
@@ -42,15 +44,19 @@ function main() {
         }
         else if(e.key == "ArrowUp") {
             cameraController.tiltUp();
+            console.log(cameraController.tiltAngle);
         }
         else if(e.key == "ArrowDown") {
             cameraController.tiltDown();
+            console.log(cameraController.tiltAngle);
         }
         else if(e.key == "ArrowLeft") {
             cameraController.panLeft();
+            console.log(cameraController.panAngle);
         }
         else if(e.key == "ArrowRight") {
             cameraController.panRight();
+            console.log(cameraController.panAngle);
         }
         else if(e.key == "t") {
             scene.makeRayTracedImage(cameraController);
@@ -68,7 +74,6 @@ function main() {
     imageBuffer.setTestPattern();
 
     rayView.init(gl, imageBuffer);
-    scene.makeRayTracedImage(cameraController);
     rayView.switchToMe();
     rayView.reload(imageBuffer);
 

@@ -1,9 +1,11 @@
 class Material {
-    constructor (Ka, Kd, Ks, s) {
+    constructor (Ka, Kd, Ks, s, r, t) {
         this.Ka = Ka;
         this.Kd = Kd;
         this.Ks = Ks;
         this.s = s;
+        this.reflectance = r;
+        this.transparency = t;
     }
 }
 
@@ -22,13 +24,14 @@ class Geometry {
         this.normalToWorld = mat4.create();
         this.vboBox = new VBObox();
         this.shapeType = shapeTypes.none;
+        this.randMaterial = new Material([.1, .1, .1], [.5+.5*Math.random(), .5+.5*Math.random(), .5+.5*Math.random()], [1,1,1], 80, .6+.4*Math.random(), .4+.2*Math.random());
     }
     initVbo(gl) {
         
     }
     //given x, y, z coordinates in model space, return material value
     getMaterial(x, y, z) {
-        var material = new Material([0,0,0], [.3, 1, 1], [0,0,0], 0);
+        var material = new Material([0,0,0], [1, .71, .75], [0,0,0], 0, 0, 0);
         return material;
     }
     //given x, y, z coordinates in model space, return world space normal
@@ -129,7 +132,7 @@ class Grid extends Geometry {
         this.xgap = 1.0;
     	this.ygap = 1.0;
     	this.lineWidth = 0.1;
-    	this.lineColor = vec4.fromValues(0.1,0.5,0.1,1.0);
+    	this.lineColor = vec4.fromValues(0.1,0.1,0.1,1.0);
     	this.gapColor = vec4.fromValues( 0.9,0.9,0.9,1.0);
         this.shapeType = shapeTypes.grid;
     }
@@ -140,11 +143,11 @@ class Grid extends Geometry {
         var xfrac = Math.abs(x) / this.xgap;
         var yfrac = Math.abs(y) / this.ygap;
         if(xfrac % 1 >= this.lineWidth && yfrac % 1 >= this.lineWidth) {
-            var material = new Material([.1,.1,.1], [this.gapColor[0], this.gapColor[1], this.gapColor[2]], [0,0,0], 0);
+            var material = new Material([.1,.1,.1], [this.gapColor[0], this.gapColor[1], this.gapColor[2]], [0,0,0], 0, 0, 0);
             return material;
         }
         else {
-            var material = new Material([.1,.1,.1], [this.lineColor[0], this.lineColor[1], this.lineColor[2]], [0,0,0], 0);
+            var material = new Material([.1,.1,.1], [this.lineColor[0], this.lineColor[1], this.lineColor[2]], [0,0,0], 0, 0, 0);
             return material;
         }
     }
@@ -187,8 +190,7 @@ class Disk extends Geometry {
         this.vboBox.init(gl, makeDisk(this.radius), 20*this.radius+4)
     }
     getMaterial(x, y, z) {
-        var material = new Material([.1,.1,.1], [1, 0, 0], [1,1,1], 50);
-        return material;
+        return this.randMaterial;
     }
     getNormal(x,y,z) {
         var normVec = vec4.fromValues(0, 0, 1, 0);
@@ -229,12 +231,11 @@ class Sphere extends Geometry {
         this.shapeType = shapeTypes.sphere;
     }
     initVbo(gl) {
-        this.vboBox.init(gl, makeSphere(13, [0, 0, 1]), 676);
+        this.vboBox.init(gl, makeSphere(13, [this.randMaterial.Kd[0], this.randMaterial.Kd[1], this.randMaterial.Kd[2]]), 676);
         this.vboBox.drawMode = gl.LINE_STRIP;
     }
     getMaterial(x, y, z) {
-        var material = new Material([.1,.1,.1], [0, 0, 1], [1,1,1], 50);
-        return material;
+        return this.randMaterial;
     }
     getNormal(x,y,z) {
         var normVec = vec4.fromValues(x, y, z, 0);
@@ -317,17 +318,18 @@ class Sphere extends Geometry {
 }
 
 class Light extends Sphere {
-    constructor (x = 0, y = 0, z = 100) {
+    constructor (x = 0, y = 0, z = 100, brightness = 100) {
         super(.1);
         this.shapeType = shapeTypes.light;
-        this.Ia = [.1,.1,.1];
+        this.Ia = [1,1,1];
         this.Id = [1,1,1];
         this.Is = [1,1,1];
+        this.brightness = brightness;
 
         this.rayTranslate(x, y, z);
     }
     getMaterial(x,y,z) {
-        var material = new Material([0, 0, 0], [1, 1, 1], [0,0,0] ,0);
+        var material = new Material([0, 0, 0], [1, 1, 1], [0,0,0] ,0, 0, 0);
         return material;
     }
     initVbo(gl) {
