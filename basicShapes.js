@@ -57,7 +57,7 @@ function makeGroundGrid() {
     return gndVerts;
 }
 
-function makeDisk(rad) {
+function makeDisk(rad, color) {
     if(rad == undefined) rad = 3;   // default value.
     //Set # of lines in grid--------------------------------------
     var xyMax	= rad;
@@ -70,8 +70,8 @@ function makeDisk(rad) {
     const floatsPerVertex = 8;
     var vertSet = new Float32Array(vertCount * floatsPerVertex); 
 
-    var xColr = vec4.fromValues(1.0, 1.0, 0.3, 1.0);	   // Light Yellow
-    var yColr = vec4.fromValues(0.3, 1.0, 1.0, 1.0);    // Light Cyan
+    var xColr = vec4.fromValues(color[0], color[1], color[2], 1.0);	   // Light Yellow
+    var yColr = vec4.fromValues(color[0], color[1], color[2], 1.0);    // Light Cyan
         
           // Local vars for vertex-making loops-------------------
     var xgap = 2*xyMax/(xCount-2);		// Spacing between lines in x,y;

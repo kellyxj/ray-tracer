@@ -60,7 +60,7 @@ const antiAliasing = {
 
 class Scene {
     constructor() {
-        this.epsilon = 1e-6;
+        this.epsilon = 1e-4;
         this.imageBuffer;
 
         this.eyeRay = new Ray();
@@ -69,10 +69,10 @@ class Scene {
         this.items = [];
         this.lights = [];
 
-        this.AAtype = antiAliasing.none;
+        this.AAtype = antiAliasing.jitteredSS;
 
-        this.recursionDepth = 1;
-        this.sampleRate = 4;
+        this.recursionDepth = 4;
+        this.sampleRate = 2;
     }
     init(gl, pic, camController) {
         this.rayCam.rayPerspective(camController.fovy, camController.aspect, camController.near);
@@ -81,50 +81,68 @@ class Scene {
 
         this.lights = [];
 
-        var light = new Light(20, 0, 1, 10);
+        var light = new Light(0, 0, 10000, 5000);
         light.initVbo(gl);
         this.lights.push(light);
 
-        var light2 = new Light(-20, 0, 1, 5);
+        var light2 = new Light(100, 0, 5, 30);
         light2.initVbo(gl);
         this.lights.push(light2);
 
-        var light2 = new Light(0, 20, 5, 3);
-        light2.initVbo(gl);
-        this.lights.push(light2);
+        /*var light3 = new Light(100, 100, 5, 30);
+        light3.initVbo(gl);
+        this.lights.push(light3);*/
+
+        var light4 = new Light(-2, 2, 2, .5);
+        light4.rayScale(.1,.1,.1);
+        light4.initVbo(gl);
+        this.lights.push(light4);
 
         this.items = [];
-        //var groundGrid = new Grid();
-        //groundGrid.initVbo(gl);
-        //this.items.push(groundGrid);
+        /*var groundGrid = new Grid();
+        groundGrid.initVbo(gl);
+        this.items.push(groundGrid);*/
 
         var sphere = new Sphere();
-        sphere.rayTranslate(-3, 0, 1);
+        sphere.rayTranslate(-4, .5, .5);
+        //sphere.rayScale(.1, 2, 1);
         sphere.initVbo(gl);
         this.items.push(sphere);
 
         var sphere2 = new Sphere();
-        sphere2.rayTranslate(0, 0, 1);
+        sphere2.rayTranslate(.5, 0, 1);
+        //sphere2.rayScale(3, 3, 1);
         sphere2.initVbo(gl);
         this.items.push(sphere2);
 
         var sphere3 = new Sphere();
-        sphere3.rayTranslate(0, 3, 1);
+        sphere3.rayTranslate(0, 3, 1.5);
         sphere3.initVbo(gl);
         this.items.push(sphere3);
 
-        var disk = new Disk();
-        disk.rayTranslate(0, -4, 1);
+        /*var disk = new Disk();
+        disk.rayTranslate(4, 0, 1);
         disk.rayRotate(90, 1, 0, 0);
         disk.initVbo(gl);
         this.items.push(disk);
-        
+
+        var disk3 = new Disk();
+        disk3.rayTranslate(4, 0, 1);
+        disk3.rayRotate(270, 1, 0, 0);
+        disk3.initVbo(gl);
+        this.items.push(disk3);
+
         var disk2 = new Disk();
-        disk2.rayTranslate(4, 4, 1);
-        disk2.rayRotate(90, 0, 1, 0);
-        disk2.rayRotate(-45, 1, 0, 0);
+        disk2.rayTranslate(4, 8, 1);
+        disk2.rayRotate(90, 1, 0, 0);
         disk2.initVbo(gl);
         this.items.push(disk2);
+
+        var disk4 = new Disk();
+        disk4.rayTranslate(4, 8, 1);
+        disk4.rayRotate(270, 1, 0, 0);
+        disk4.initVbo(gl);
+        this.items.push(disk2);*/
     }
     setImageBuffer(newImage) {
         this.rayCam.setSize(newImage.xSize, newImage.ySize);
@@ -191,11 +209,7 @@ class Scene {
                     vec4.normalize(L, L);
                     const lambertian = vec4.dot(L,N);
 
-                    var attenuation = 1;
-
-                    if(closest.geometry.shapeType != shapeTypes.grid) {
-                        attenuation = 1/d;
-                    }
+                    var attenuation = 1/d;
 
                     closest.color[0] += attenuation*light.brightness*light.Id[0] * material.Kd[0]*Math.max(0, lambertian);
                     closest.color[1] += attenuation*light.brightness*light.Id[1] * material.Kd[1]*Math.max(0, lambertian);
@@ -204,6 +218,10 @@ class Scene {
                     closest.color[0] += attenuation*light.brightness*light.Is[0] * material.Ks[0]* Math.pow(Math.max(0, vec4.dot(R,closest.viewVec)),material.s);
                     closest.color[1] += attenuation*light.brightness*light.Is[1] * material.Ks[1]* Math.pow(Math.max(0, vec4.dot(R,closest.viewVec)),material.s);
                     closest.color[2] += attenuation*light.brightness*light.Is[2] * material.Ks[2]* Math.pow(Math.max(0, vec4.dot(R,closest.viewVec)),material.s);
+
+                    closest.color[0] += material.Ke[0];
+                    closest.color[1] += material.Ke[1];
+                    closest.color[2] += material.Ke[2];
                 }
             }
             closest.color[0] += light.Ia[0] * material.Ka[0];
@@ -273,19 +291,20 @@ class Scene {
                     this.imageBuffer.floatBuffer[index+3] = hitList.getMin().color[3];
                 }
                 else if(this.AAtype == antiAliasing.jitteredSS) {
-                    for(let k = 0; k < 4; k++) {
-                        for(let m = 0; m < 4; m++) {
+                    var d = 1/this.sampleRate;
+                    for(let k = 0; k < this.sampleRate; k++) {
+                        for(let m = 0; m < this.sampleRate; m++) {
                             var hitList = new HitList();
-                            this.rayCam.setEyeRay(this.eyeRay, i+.25*k+.5*(Math.random()-1), j+.25*m+.5*(Math.random()-1));
+                            this.rayCam.setEyeRay(this.eyeRay, .5*d+i+d*k+d*(Math.random()-1), .5*d+j+d*m+d*(Math.random()-1));
 
                             this.traceRay(this.eyeRay, hitList, 0, false);
 
                             const index = (j * this.imageBuffer.xSize + i) * 4;
                             
-                            this.imageBuffer.floatBuffer[index] += .0625*hitList.getMin().color[0];
-                            this.imageBuffer.floatBuffer[index+1] += .0625*hitList.getMin().color[1];
-                            this.imageBuffer.floatBuffer[index+2] += .0625*hitList.getMin().color[2];
-                            this.imageBuffer.floatBuffer[index+3] += .0625*hitList.getMin().color[3];
+                            this.imageBuffer.floatBuffer[index] += d*d*hitList.getMin().color[0];
+                            this.imageBuffer.floatBuffer[index+1] += d*d*hitList.getMin().color[1];
+                            this.imageBuffer.floatBuffer[index+2] += d*d*hitList.getMin().color[2];
+                            this.imageBuffer.floatBuffer[index+3] += d*d*hitList.getMin().color[3];
                         }
                     }
                 }
