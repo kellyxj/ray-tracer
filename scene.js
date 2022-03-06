@@ -71,8 +71,11 @@ class Scene {
 
         this.AAtype = antiAliasing.jitteredSS;
 
-        this.recursionDepth = 4;
-        this.sampleRate = 2;
+        this.recursionDepth = 1;
+        this.sampleRate = 4;
+
+        //used for soft shadows
+        this.shadowRayCount = 1;
     }
     init(gl, pic, camController) {
         this.rayCam.rayPerspective(camController.fovy, camController.aspect, camController.near);
@@ -82,6 +85,7 @@ class Scene {
         this.lights = [];
 
         var light = new Light(0, 0, 10000, 5000);
+        light.rayScale(1000, 1000, 1000, 10000);
         light.initVbo(gl);
         this.lights.push(light);
 
@@ -99,9 +103,9 @@ class Scene {
         this.lights.push(light4);
 
         this.items = [];
-        /*var groundGrid = new Grid();
+        var groundGrid = new Grid();
         groundGrid.initVbo(gl);
-        this.items.push(groundGrid);*/
+        this.items.push(groundGrid);
 
         var sphere = new Sphere();
         sphere.rayTranslate(-4, .5, .5);
@@ -176,53 +180,60 @@ class Scene {
         }
         else {
             for(var light of this.lights) {
-                //spawn a shadow ray
-                var shadowRay = new Ray();
-                vec4.copy(shadowRay.origin, closest.position);
-                var directionVec = vec4.create();
+                for(let i = 0; i < this.shadowRayCount; i++) {
+                    //spawn a shadow ray
+                    var shadowRay = new Ray();
+                    vec4.copy(shadowRay.origin, closest.position);
+                    var directionVec = vec4.create();
 
-                var lightCenter = vec4.fromValues(0,0,0,1);
-                vec4.transformMat4(lightCenter, lightCenter, light.modelMatrix);
-    
-                var L = vec4.create();
-                vec4.subtract(L, lightCenter, closest.position);
-                vec3.normalize(directionVec, L);
-                vec4.copy(shadowRay.dir, directionVec);
+                    var lightCenter = vec4.fromValues(0,0,0,1);
+                    vec4.transformMat4(lightCenter, lightCenter, light.modelMatrix);
 
-                vec4.scaleAndAdd(shadowRay.origin, shadowRay.origin, closest.viewVec, this.epsilon);
-    
-                var shadowRayHitList = new HitList();
-                this.traceRay(shadowRay, shadowRayHitList, depth+1, true);
+                    var L = vec4.create();
+                    vec4.subtract(L, lightCenter, closest.position);
+                    vec3.normalize(directionVec, L);
+                    vec4.copy(shadowRay.dir, directionVec);
 
-                var d = Math.sqrt(vec4.dot(L,L));
-                
-                //direct illumination case
-                if(shadowRayHitList.getMin().geometry.shapeType == shapeTypes.none || shadowRayHitList.getMin().geometry.shapeType == shapeTypes.light ) {
-                    var N = vec4.create();
-                    vec4.copy(N, closest.normal);
-                    var C = vec4.create();
-                    vec4.scale(C, N, vec4.dot(L,N));
-                    var R = vec4.create();
-                    vec4.scale(R, C, 2);
-                    vec4.subtract(R, R, L);
-                    vec4.normalize(R, R);
-                    vec4.normalize(L, L);
-                    const lambertian = vec4.dot(L,N);
+                    vec4.scaleAndAdd(shadowRay.origin, shadowRay.origin, closest.viewVec, this.epsilon);
+                    var randVec = vec4.fromValues(Math.random()-1, Math.random()-1, Math.random()-1, 0);
+                    vec4.scaleAndAdd(shadowRay.dir, shadowRay.dir, randVec, 1000*this.epsilon);
 
-                    var attenuation = 1/d;
+                    var shadowRayHitList = new HitList();
+                    this.traceRay(shadowRay, shadowRayHitList, depth+1, true);
 
-                    closest.color[0] += attenuation*light.brightness*light.Id[0] * material.Kd[0]*Math.max(0, lambertian);
-                    closest.color[1] += attenuation*light.brightness*light.Id[1] * material.Kd[1]*Math.max(0, lambertian);
-                    closest.color[2] += attenuation*light.brightness*light.Id[2] * material.Kd[2]*Math.max(0, lambertian);
+                    var d = Math.sqrt(vec4.dot(L,L));
 
-                    closest.color[0] += attenuation*light.brightness*light.Is[0] * material.Ks[0]* Math.pow(Math.max(0, vec4.dot(R,closest.viewVec)),material.s);
-                    closest.color[1] += attenuation*light.brightness*light.Is[1] * material.Ks[1]* Math.pow(Math.max(0, vec4.dot(R,closest.viewVec)),material.s);
-                    closest.color[2] += attenuation*light.brightness*light.Is[2] * material.Ks[2]* Math.pow(Math.max(0, vec4.dot(R,closest.viewVec)),material.s);
+                    //direct illumination case
+                    if(shadowRayHitList.getMin().geometry.shapeType == shapeTypes.light ) {
+                        var N = vec4.create();
+                        vec4.copy(N, closest.normal);
+                        var C = vec4.create();
+                        vec4.scale(C, N, vec4.dot(L,N));
+                        var R = vec4.create();
+                        vec4.scale(R, C, 2);
+                        vec4.subtract(R, R, L);
+                        vec4.normalize(R, R);
+                        vec4.normalize(L, L);
+                        const lambertian = vec4.dot(L,N);
 
-                    closest.color[0] += material.Ke[0];
-                    closest.color[1] += material.Ke[1];
-                    closest.color[2] += material.Ke[2];
+                        var attenuation = 1/d;
+                        var scale = 1/this.shadowRayCount;
+
+                        closest.color[0] += scale*attenuation*light.brightness*light.Id[0] * material.Kd[0]*Math.max(0, lambertian);
+                        closest.color[1] += scale*attenuation*light.brightness*light.Id[1] * material.Kd[1]*Math.max(0, lambertian);
+                        closest.color[2] += scale*attenuation*light.brightness*light.Id[2] * material.Kd[2]*Math.max(0, lambertian);
+
+                        closest.color[0] += scale*attenuation*light.brightness*light.Is[0] * material.Ks[0]* Math.pow(Math.max(0, vec4.dot(R,closest.viewVec)),material.s);
+                        closest.color[1] += scale*attenuation*light.brightness*light.Is[1] * material.Ks[1]* Math.pow(Math.max(0, vec4.dot(R,closest.viewVec)),material.s);
+                        closest.color[2] += scale*attenuation*light.brightness*light.Is[2] * material.Ks[2]* Math.pow(Math.max(0, vec4.dot(R,closest.viewVec)),material.s);
+
+                        closest.color[0] += scale*material.Ke[0];
+                        closest.color[1] += scale*material.Ke[1];
+                        closest.color[2] += scale*material.Ke[2];
+                    }
                 }
+
+                
             }
             closest.color[0] += light.Ia[0] * material.Ka[0];
             closest.color[1] += light.Ia[1] * material.Ka[1];
