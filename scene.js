@@ -9,6 +9,8 @@ class Hit {
         this.isEntry = true;
         this.modelSpacePos = vec4.create();
         this.color = vec4.fromValues( 0,0,0,1);
+
+        this.material = new Material();
     }
 }
 
@@ -71,8 +73,8 @@ class Scene {
 
         this.AAtype = antiAliasing.jitteredSS;
 
-        this.recursionDepth = 1;
-        this.sampleRate = 4;
+        this.recursionDepth = 2;
+        this.sampleRate = 2;
 
         //used for soft shadows
         this.shadowRayCount = 1;
@@ -85,7 +87,7 @@ class Scene {
         this.lights = [];
 
         var light = new Light(0, 0, 10000, 5000);
-        light.rayScale(1000, 1000, 1000, 10000);
+        light.rayScale(150, 150, 150, 1);
         light.initVbo(gl);
         this.lights.push(light);
 
@@ -110,18 +112,15 @@ class Scene {
         var sphere = new Sphere();
         sphere.rayTranslate(-4, .5, .5);
         //sphere.rayScale(.1, 2, 1);
-        sphere.initVbo(gl);
         this.items.push(sphere);
 
         var sphere2 = new Sphere();
         sphere2.rayTranslate(.5, 0, 1);
         //sphere2.rayScale(3, 3, 1);
-        sphere2.initVbo(gl);
         this.items.push(sphere2);
 
         var sphere3 = new Sphere();
         sphere3.rayTranslate(0, 3, 1.5);
-        sphere3.initVbo(gl);
         this.items.push(sphere3);
 
         /*var disk = new Disk();
@@ -147,6 +146,14 @@ class Scene {
         disk4.rayRotate(270, 1, 0, 0);
         disk4.initVbo(gl);
         this.items.push(disk2);*/
+
+        for(var item of this.items) {
+            if(item.shapeType != shapeTypes.grid) {
+                var glass = new Glass();
+                item.setMaterial(glass);
+                item.initVbo(gl);
+            }
+        }
     }
     setImageBuffer(newImage) {
         this.rayCam.setSize(newImage.xSize, newImage.ySize);
@@ -169,14 +176,14 @@ class Scene {
             hitList.insert(hit);
         }
         var closest = hitList.getMin();
-        var material = closest.geometry.getMaterial(closest.modelSpacePos[0], closest.modelSpacePos[1], closest.modelSpacePos[2]);
+        var phong = closest.material.getColor(closest.modelSpacePos);
 
         closest.viewVec = vec4.create();
         vec4.subtract(closest.viewVec, this.rayCam.eyePoint, closest.position);
         vec4.normalize(closest.viewVec, closest.viewVec);
 
         if(closest.geometry.shapeType == shapeTypes.none || closest.geometry.shapeType == shapeTypes.light ) {
-            closest.color = vec4.fromValues(material.Kd[0], material.Kd[1], material.Kd[2], 1);
+            closest.color = vec4.fromValues(phong.Kd[0], phong.Kd[1], phong.Kd[2], 1);
         }
         else {
             for(var light of this.lights) {
@@ -195,9 +202,11 @@ class Scene {
                     vec4.copy(shadowRay.dir, directionVec);
 
                     vec4.scaleAndAdd(shadowRay.origin, shadowRay.origin, closest.viewVec, this.epsilon);
-                    var randVec = vec4.fromValues(Math.random()-1, Math.random()-1, Math.random()-1, 0);
-                    vec4.scaleAndAdd(shadowRay.dir, shadowRay.dir, randVec, 1000*this.epsilon);
 
+                    if(this.shadowRayCount > 1) {
+                        var randVec = vec4.fromValues(Math.random()-1, Math.random()-1, Math.random()-1, 0);
+                        vec4.scaleAndAdd(shadowRay.dir, shadowRay.dir, randVec, 100*this.epsilon);
+                    }
                     var shadowRayHitList = new HitList();
                     this.traceRay(shadowRay, shadowRayHitList, depth+1, true);
 
@@ -219,27 +228,27 @@ class Scene {
                         var attenuation = 1/d;
                         var scale = 1/this.shadowRayCount;
 
-                        closest.color[0] += scale*attenuation*light.brightness*light.Id[0] * material.Kd[0]*Math.max(0, lambertian);
-                        closest.color[1] += scale*attenuation*light.brightness*light.Id[1] * material.Kd[1]*Math.max(0, lambertian);
-                        closest.color[2] += scale*attenuation*light.brightness*light.Id[2] * material.Kd[2]*Math.max(0, lambertian);
+                        closest.color[0] += scale*attenuation*light.brightness*light.Id[0] * phong.Kd[0]*Math.max(0, lambertian);
+                        closest.color[1] += scale*attenuation*light.brightness*light.Id[1] * phong.Kd[1]*Math.max(0, lambertian);
+                        closest.color[2] += scale*attenuation*light.brightness*light.Id[2] * phong.Kd[2]*Math.max(0, lambertian);
 
-                        closest.color[0] += scale*attenuation*light.brightness*light.Is[0] * material.Ks[0]* Math.pow(Math.max(0, vec4.dot(R,closest.viewVec)),material.s);
-                        closest.color[1] += scale*attenuation*light.brightness*light.Is[1] * material.Ks[1]* Math.pow(Math.max(0, vec4.dot(R,closest.viewVec)),material.s);
-                        closest.color[2] += scale*attenuation*light.brightness*light.Is[2] * material.Ks[2]* Math.pow(Math.max(0, vec4.dot(R,closest.viewVec)),material.s);
+                        closest.color[0] += scale*attenuation*light.brightness*light.Is[0] * phong.Ks[0]* Math.pow(Math.max(0, vec4.dot(R,closest.viewVec)),phong.s);
+                        closest.color[1] += scale*attenuation*light.brightness*light.Is[1] * phong.Ks[1]* Math.pow(Math.max(0, vec4.dot(R,closest.viewVec)),phong.s);
+                        closest.color[2] += scale*attenuation*light.brightness*light.Is[2] * phong.Ks[2]* Math.pow(Math.max(0, vec4.dot(R,closest.viewVec)),phong.s);
 
-                        closest.color[0] += scale*material.Ke[0];
-                        closest.color[1] += scale*material.Ke[1];
-                        closest.color[2] += scale*material.Ke[2];
+                        closest.color[0] += scale*phong.Ke[0];
+                        closest.color[1] += scale*phong.Ke[1];
+                        closest.color[2] += scale*phong.Ke[2];
                     }
                 }
 
                 
             }
-            closest.color[0] += light.Ia[0] * material.Ka[0];
-            closest.color[1] += light.Ia[1] * material.Ka[1];
-            closest.color[2] += light.Ia[2] * material.Ka[2];
+            closest.color[0] += light.Ia[0] * phong.Ka[0];
+            closest.color[1] += light.Ia[1] * phong.Ka[1];
+            closest.color[2] += light.Ia[2] * phong.Ka[2];
 
-            if(closest.geometry.getMaterial().reflectance > 0) {
+            if(closest.material.getReflectance(closest.modelSpacePos) > 0) {
                 //spawn a reflected ray
                 var reflectedRay = new Ray();
                 var reflectedRayHitList = new HitList();
@@ -265,11 +274,11 @@ class Scene {
                     this.traceRay(reflectedRay, reflectedRayHitList, depth+1, inShadow);
                 }
                 var bounceHit = reflectedRayHitList.getMin();
-                var bounceMat = bounceHit.geometry.getMaterial(bounceHit.modelSpacePos[0], bounceHit.modelSpacePos[1], bounceHit.modelSpacePos[2]);
+                var bouncePhong = bounceHit.material.getColor(bounceHit.modelSpacePos);
                 if(bounceHit.geometry.shapeType == shapeTypes.none) {
-                    closest.color[0] += .5*bounceMat.Kd[0];
-                    closest.color[1] += .5*bounceMat.Kd[1];
-                    closest.color[2] += .5*bounceMat.Kd[2];
+                    closest.color[0] += .5*bouncePhong.Kd[0];
+                    closest.color[1] += .5*bouncePhong.Kd[1];
+                    closest.color[2] += .5*bouncePhong.Kd[2];
                 }
                 else {
                     closest.color[0] += .5*bounceHit.color[0];

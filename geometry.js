@@ -1,5 +1,5 @@
 class Material {
-    constructor (Ke, Ka, Kd, Ks, s, r, t) {
+    constructor (Ke = [0,0,0], Ka = [0,0,0], Kd = [.4, .6, .9], Ks = [0,0,0], s=0, r=0, t=0) {
         this.Ke = Ke;
         this.Ka = Ka;
         this.Kd = Kd;
@@ -7,6 +7,57 @@ class Material {
         this.s = s;
         this.reflectance = r;
         this.transparency = t;
+    }
+    //given model space vec4(x,y,z,w) return the color at that point
+    getColor(pos) {
+        var phong = {
+            Ke: this.Ke,
+            Ka: this.Ka,
+            Kd: this.Kd,
+            Ks: this.Ks,
+            s: this.s
+        }
+        return phong;
+    }
+    getReflectance(pos) {
+        return this.reflectance;
+    }
+    getTransparency(pos) {
+        return this.transparency;
+    }
+}
+class Glass extends Material {
+    constructor() {
+        super([0,0,0],[.1, .1, .1], [.5+.5*Math.random(), .5+.5*Math.random(), .5+.5*Math.random()], [1,1,1], 80, .6+.4*Math.random(), .4+.2*Math.random());
+    }
+}
+
+class GroundPlane extends Material {
+    constructor() {
+        super([.1,.1,.1],[.1,.1,.1], [0,0,0], [0,0,0], 0, 0, 0);
+        this.xgap = 1.0;
+    	this.ygap = 1.0;
+    	this.lineWidth = 0.1;
+    	this.lineColor = vec4.fromValues(0.1,0.1,0.1,1.0);
+    	this.gapColor = vec4.fromValues( 1,1,1,1.0);
+    }
+    getColor(pos) {
+        var xfrac = Math.abs(pos[0]) / this.xgap;
+        var yfrac = Math.abs(pos[1]) / this.ygap;
+        var phong = {
+            Ke: this.Ke,
+            Ka: this.Ka,
+            Kd: [0,0,0],
+            Ks: this.Ks,
+            s: this.s
+        }
+        if(xfrac % 1 >= this.lineWidth && yfrac % 1 >= this.lineWidth) {
+            phong.Kd = [this.gapColor[0], this.gapColor[1], this.gapColor[2]];
+        }
+        else {
+            phong.Kd = [this.lineColor[0], this.lineColor[1], this.lineColor[2]];
+        }
+        return phong;
     }
 }
 
@@ -25,19 +76,17 @@ class Geometry {
         this.normalToWorld = mat4.create();
         this.vboBox = new VBObox();
         this.shapeType = shapeTypes.none;
-        this.randMaterial = new Material([0,0,0],[.1, .1, .1], [.5+.5*Math.random(), .5+.5*Math.random(), .5+.5*Math.random()], [1,1,1], 80, .6+.4*Math.random(), .4+.2*Math.random());
-        //this.randMaterial = new Material([0,0,0],[0, 0, 0], [0, 0, 0], [1,1,1], 80, 1, .4+.2*Math.random());
+
+        this.material = new Material();
     }
     initVbo(gl) {
         
     }
-    //given x, y, z coordinates in model space, return material value
-    getMaterial(x, y, z) {
-        var material = new Material([0,0,0],[0,0,0], [.4, .6, .9], [0,0,0], 0, 0, 0);
-        return material;
+    setMaterial(m) {
+        this.material = m;
     }
     //given x, y, z coordinates in model space, return world space normal
-    getNormal(x, y, z) {
+    getNormal(pos) {
 
     }
     setIdentity() {
@@ -131,29 +180,14 @@ class Geometry {
 class Grid extends Geometry {
     constructor() {
         super();
-        this.xgap = 1.0;
-    	this.ygap = 1.0;
-    	this.lineWidth = 0.1;
-    	this.lineColor = vec4.fromValues(0.1,0.1,0.1,1.0);
-    	this.gapColor = vec4.fromValues( 1,1,1,1.0);
+        var gridMat = new GroundPlane();
+        this.setMaterial(gridMat);
         this.shapeType = shapeTypes.grid;
     }
     initVbo(gl) {
         this.vboBox.init(gl, makeGroundGrid(), 404);
     }
-    getMaterial(x, y, z) {
-        var xfrac = Math.abs(x) / this.xgap;
-        var yfrac = Math.abs(y) / this.ygap;
-        if(xfrac % 1 >= this.lineWidth && yfrac % 1 >= this.lineWidth) {
-            var material = new Material([.1,.1,.1],[.1,.1,.1], [this.gapColor[0], this.gapColor[1], this.gapColor[2]], [0,0,0], 0, 0, 0);
-            return material;
-        }
-        else {
-            var material = new Material([.1,.1,.1],[.1,.1,.1], [this.lineColor[0], this.lineColor[1], this.lineColor[2]], [0,0,0], 0, 0, 0);
-            return material;
-        }
-    }
-    getNormal(x,y,z) {
+    getNormal(pos) {
         var normVec = vec4.fromValues(0, 0, 1, 0);
         vec4.transformMat4(normVec, normVec, this.normalToWorld);
         normVec[3] = 0;
@@ -178,6 +212,8 @@ class Grid extends Geometry {
             hit.normal = vec4.create();
             vec4.copy(hit.normal, this.getNormal(hit.modelSpacePos[0], hit.modelSpacePos[1], hit.modelSpacePos[2]));
 
+            hit.material = this.material;
+
             hitList.insert(hit);
         }
     }
@@ -190,12 +226,10 @@ class Disk extends Geometry {
         this.shapeType = shapeTypes.disk;
     }
     initVbo(gl) {
-        this.vboBox.init(gl, makeDisk(this.radius, [this.randMaterial.Kd[0],this.randMaterial.Kd[1],this.randMaterial.Kd[2]]), 20*this.radius+4)
+        var color = this.material.getColor().Kd;
+        this.vboBox.init(gl, makeDisk(this.radius, [color[0],color[1],color[2]]), 20*this.radius+4)
     }
-    getMaterial(x, y, z) {
-        return this.randMaterial;
-    }
-    getNormal(x,y,z) {
+    getNormal(pos) {
         var normVec = vec4.fromValues(0, 0, 1, 0);
         vec4.transformMat4(normVec, normVec, this.normalToWorld);
         normVec[3] = 0;
@@ -223,6 +257,8 @@ class Disk extends Geometry {
             hit.normal = vec4.create();
             vec4.copy(hit.normal, this.getNormal(hit.modelSpacePos[0], hit.modelSpacePos[1], hit.modelSpacePos[2]));
 
+            hit.material = this.material;
+
             hitList.insert(hit);
         }
     }
@@ -235,14 +271,12 @@ class Sphere extends Geometry {
         this.shapeType = shapeTypes.sphere;
     }
     initVbo(gl) {
-        this.vboBox.init(gl, makeSphere(13, [this.randMaterial.Kd[0], this.randMaterial.Kd[1], this.randMaterial.Kd[2]]), 676);
+        var color = this.material.getColor().Kd;
+        this.vboBox.init(gl, makeSphere(13, [color[0], color[1], color[2]]), 676);
         this.vboBox.drawMode = gl.LINE_STRIP;
     }
-    getMaterial(x, y, z) {
-        return this.randMaterial;
-    }
-    getNormal(x,y,z) {
-        var normVec = vec4.fromValues(x, y, z, 0);
+    getNormal(pos) {
+        var normVec = vec4.fromValues(pos[0], pos[1], pos[2], pos[3]);
         vec4.transformMat4(normVec, normVec, this.normalToWorld);
         normVec[3] = 0;
         return normVec;
@@ -277,7 +311,9 @@ class Sphere extends Geometry {
             vec4.scaleAndAdd(hit.position, inRay.origin, inRay.dir, t0);
 
             hit.normal = vec4.create();
-            vec4.copy(hit.normal, this.getNormal(hit.modelSpacePos[0], hit.modelSpacePos[1], hit.modelSpacePos[2]));
+            vec4.copy(hit.normal, this.getNormal(hit.modelSpacePos));
+
+            hit.material = this.material;
 
             hitList.insert(hit);
         }
@@ -301,7 +337,9 @@ class Sphere extends Geometry {
                 vec4.scaleAndAdd(firstHit.position, inRay.origin, inRay.dir, t0);
 
                 firstHit.normal = vec4.create();
-                vec4.copy(firstHit.normal, this.getNormal(firstHit.modelSpacePos[0], firstHit.modelSpacePos[1], firstHit.modelSpacePos[2]));
+                vec4.copy(firstHit.normal, this.getNormal(firstHit.modelSpacePos));
+
+                firstHit.material = this.material;
 
                 hitList.insert(firstHit);
 
@@ -314,7 +352,9 @@ class Sphere extends Geometry {
                 vec4.scaleAndAdd(secondHit.position, inRay.origin, inRay.dir, t1);
 
                 secondHit.normal = vec4.create();
-                vec4.copy(secondHit.normal, this.getNormal(secondHit.modelSpacePos[0], secondHit.modelSpacePos[1], secondHit.modelSpacePos[2]));
+                vec4.copy(secondHit.normal, this.getNormal(secondHit.modelSpacePos));
+
+                secondHit.material = this.material;
 
                 hitList.insert(secondHit);
             }
@@ -331,14 +371,12 @@ class Light extends Sphere {
         this.Is = [1,1,1];
         this.brightness = brightness;
 
+        this.material = new Material([0,0,0],[0, 0, 0], [1, 1, 1], [0,0,0] ,0, 0, 0)
+
         this.rayTranslate(x, y, z);
     }
     initVbo(gl) {
         this.vboBox.init(gl, makeSphere(13, [1,1,1]), 676);
         this.vboBox.drawMode = gl.LINE_STRIP;
-    }
-    getMaterial(x,y,z) {
-        var material = new Material([0,0,0],[0, 0, 0], [1, 1, 1], [0,0,0] ,0, 0, 0);
-        return material;
     }
 }
