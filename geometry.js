@@ -351,8 +351,9 @@ class Light extends Sphere {
 }
 
 class Sun extends Light {
-    constructor(x=0, y=0, z=100, brightness = 100) {
+    constructor(x=0, y=0, z=10000, brightness = 3000) {
         super(x,y,z,brightness);
+        this.rayScale(1000, 1000, 1000, 1);
         this.material = new SunMaterial(brightness);
     }
 }

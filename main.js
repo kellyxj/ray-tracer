@@ -69,7 +69,8 @@ function main() {
         }
     });
 
-    scene.init(gl, imageBuffer, cameraController);
+    var sceneSelector = new SceneSelector(scene, gl, imageBuffer, cameraController);
+    sceneSelector.initMaterials();
 
     imageBuffer.setTestPattern();
 
