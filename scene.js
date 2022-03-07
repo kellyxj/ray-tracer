@@ -86,20 +86,20 @@ class Scene {
 
         this.lights = [];
 
-        var light = new Sun(0, 0, 10000, 5000);
-        light.rayScale(150, 150, 150, 1);
+        var light = new Sun(0, 0, 10000, 3500);
+        light.rayScale(250, 250, 250, 1);
         light.initVbo(gl);
         this.lights.push(light);
 
-        var light2 = new Light(100, 0, 5, 30);
+        var light2 = new Light(100, 0, 5, 20);
         light2.initVbo(gl);
         this.lights.push(light2);
 
-        /*var light3 = new Light(100, 100, 5, 30);
+        /*var light3 = new Light(100, 100, 5, 10);
         light3.initVbo(gl);
         this.lights.push(light3);*/
 
-        var light4 = new Light(-2, 2, 2, .5);
+        var light4 = new Light(-4, 4, 4, .5);
         light4.rayScale(.1,.1,.1);
         light4.initVbo(gl);
         this.lights.push(light4);
@@ -182,7 +182,7 @@ class Scene {
         vec4.subtract(closest.viewVec, this.rayCam.eyePoint, closest.position);
         vec4.normalize(closest.viewVec, closest.viewVec);
 
-        if(closest.geometry.shapeType == shapeTypes.none || closest.geometry.shapeType == shapeTypes.light ) {
+        if(closest.geometry.shapeType == shapeTypes.none || closest.geometry.shapeType == shapeTypes.light) {
             closest.color = vec4.fromValues(phong.Kd[0], phong.Kd[1], phong.Kd[2], 1);
         }
         else {
@@ -205,7 +205,7 @@ class Scene {
 
                     if(this.shadowRayCount > 1) {
                         var randVec = vec4.fromValues(Math.random()-1, Math.random()-1, Math.random()-1, 0);
-                        vec4.scaleAndAdd(shadowRay.dir, shadowRay.dir, randVec, 100*this.epsilon);
+                        vec4.scaleAndAdd(shadowRay.dir, shadowRay.dir, randVec, 150*this.epsilon);
                     }
                     var shadowRayHitList = new HitList();
                     this.traceRay(shadowRay, shadowRayHitList, depth+1, true);
@@ -251,7 +251,8 @@ class Scene {
                 closest.color[2] += ambient[2] * phong.Ka[2]; 
             }
 
-            if(closest.material.getReflectance(closest.modelSpacePos) > 0) {
+            var reflectance = closest.material.getReflectance(closest.modelSpacePos);
+            if(reflectance > 0) {
                 //spawn a reflected ray
                 var reflectedRay = new Ray();
                 var reflectedRayHitList = new HitList();
@@ -268,7 +269,7 @@ class Scene {
                 vec4.scale(C, N, vec4.dot(V, N));
                 var R = vec4.create();
                 vec4.scale(R, C, 2);
-                vec4.subtract(R, R, L);
+                vec4.subtract(R, R, V);
                 vec4.normalize(R,R);
 
                 vec4.copy(reflectedRay.dir, R);
@@ -279,14 +280,14 @@ class Scene {
                 var bounceHit = reflectedRayHitList.getMin();
                 var bouncePhong = bounceHit.material.getColor(bounceHit.modelSpacePos);
                 if(bounceHit.geometry.shapeType == shapeTypes.none) {
-                    closest.color[0] += .5*bouncePhong.Kd[0];
-                    closest.color[1] += .5*bouncePhong.Kd[1];
-                    closest.color[2] += .5*bouncePhong.Kd[2];
+                    closest.color[0] += reflectance*bouncePhong.Kd[0];
+                    closest.color[1] += reflectance*bouncePhong.Kd[1];
+                    closest.color[2] += reflectance*bouncePhong.Kd[2];
                 }
-                else {
-                    closest.color[0] += .5*bounceHit.color[0];
-                    closest.color[1] += .5*bounceHit.color[1];
-                    closest.color[2] += .5*bounceHit.color[2];
+                else{
+                    closest.color[0] += reflectance*bounceHit.color[0];
+                    closest.color[1] += reflectance*bounceHit.color[1];
+                    closest.color[2] += reflectance*bounceHit.color[2];
                 }
             }
         }
