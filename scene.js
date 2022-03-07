@@ -86,23 +86,32 @@ class Scene {
 
         this.lights = [];
 
-        var light = new Sun(0, 0, 10000, 3500);
+        /*var light = new Sun(0, 0, 10000, 3500);
         light.rayScale(1000, 1000, 1000, 1);
         light.initVbo(gl);
-        this.lights.push(light);
+        this.lights.push(light);*/
 
-        /*var light2 = new Light(50, 0, 5, 10);
-        light2.setMaterial(new Disco(10, 5));
+        var light2 = new Light(0, 0, 5, 10);
+        light2.setMaterial(new Disco(5, 5));
         light2.initVbo(gl);
-        this.lights.push(light2);*/
 
-        var light3 = new Light(-50, -50, 20, 20);
+        var rotateAnim = new AnimationRotate(10, 0, 0, 1);
+        light2.animations.push(rotateAnim);
+
+        this.lights.push(light2);
+
+        /*var light3 = new Light(-50, -50, 20, 20);
         light3.initVbo(gl);
-        this.lights.push(light3);
+        this.lights.push(light3);*/
 
-        var light4 = new Light(-4, 4, 4, .1);
+        var light4 = new Light(-5, 0, 6, 1);
         light4.rayScale(.1,.1,.1);
         light4.initVbo(gl);
+
+        var translateAnim = new AnimationTranslate(10, 0, -1, 0);
+        light4.animations.push(rotateAnim);
+        light4.animations.push(translateAnim);
+
         this.lights.push(light4);
 
         this.items = [];
@@ -110,9 +119,9 @@ class Scene {
         groundGrid.initVbo(gl);
         this.items.push(groundGrid);
 
-        var sphere = new Sphere();
+        /*var sphere = new Sphere();
         sphere.rayTranslate(-4, .5, 2);
-        this.items.push(sphere);
+        this.items.push(sphere);*/
 
         /*var sphere2 = new Sphere();
         sphere2.rayTranslate(.5, 0, 1);
@@ -178,7 +187,7 @@ class Scene {
         vec4.subtract(closest.viewVec, this.rayCam.eyePoint, closest.position);
         vec4.normalize(closest.viewVec, closest.viewVec);
 
-        if(closest.geometry.shapeType == shapeTypes.none || closest.geometry.shapeType == shapeTypes.light) {
+        if(closest.geometry.shapeType == shapeTypes.none) {
             closest.color = vec4.fromValues(phong.Kd[0], phong.Kd[1], phong.Kd[2], 1);
         }
         else {
@@ -210,7 +219,7 @@ class Scene {
 
                     var shadowHitPoint = shadowRayHitList.getMin();
                     //direct illumination case
-                    if(shadowHitPoint.geometry.shapeType == shapeTypes.light ) {
+                    if(shadowHitPoint.geometry.shapeType == shapeTypes.light) {
                         var N = vec4.create();
                         vec4.copy(N, closest.normal);
                         var C = vec4.create();

@@ -15,6 +15,8 @@ class Geometry {
         this.vboBox = new VBObox();
         this.shapeType = shapeTypes.none;
 
+        this.animations = [];
+
         this.material = new Material();
     }
     initVbo(gl) {
@@ -102,6 +104,19 @@ class Geometry {
 
     trace(inRay, hitList) {
         
+    }
+    animate(timeStep) {
+        for(var animation of this.animations) {
+            if(animation.type == animationTypes.rotate) {
+                this.rayRotate(timeStep/1000*animation.amount, animation.ax, animation.ay, animation.az);
+            }
+            else if(animation.type == animationTypes.translate) {
+                this.rayTranslate(timeStep/1000*animation.amount*animation.ax, timeStep/1000*animation.amount*animation.ay, timeStep/1000*animation.amount*animation.az);
+            }
+            else if(animation.type == animationTypes.scale) {
+                this.rayScale(1+(animation.amount-1)*timeStep/1000, 1+(animation.amount-1)*timeStep/1000, 1+(animation.amount-1)*timeStep/1000);
+            }
+        }
     }
 
     drawPreview(mvpMatrix) {

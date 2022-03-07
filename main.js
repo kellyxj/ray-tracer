@@ -94,6 +94,13 @@ function animate() {
       var now = Date.now();	        
       var elapsed = now - g_last;	// amount of time passed, in integer milliseconds
       g_last = now;               // re-set our stopwatch/timer.
+
+      for(var item of scene.items) {
+          item.animate(elapsed);
+      }
+      for(var light of scene.lights) {
+          light.animate(elapsed);
+      }
     
       return elapsed;
     }
