@@ -86,7 +86,7 @@ class Scene {
 
         this.lights = [];
 
-        var light = new Light(0, 0, 10000, 5000);
+        var light = new Sun(0, 0, 10000, 5000);
         light.rayScale(150, 150, 150, 1);
         light.initVbo(gl);
         this.lights.push(light);
@@ -149,8 +149,8 @@ class Scene {
 
         for(var item of this.items) {
             if(item.shapeType != shapeTypes.grid) {
-                var glass = new Glass();
-                item.setMaterial(glass);
+                var mirror = new Mirror();
+                item.setMaterial(mirror);
                 item.initVbo(gl);
             }
         }
@@ -212,8 +212,9 @@ class Scene {
 
                     var d = Math.sqrt(vec4.dot(L,L));
 
+                    var shadowHitPoint = shadowRayHitList.getMin();
                     //direct illumination case
-                    if(shadowRayHitList.getMin().geometry.shapeType == shapeTypes.light ) {
+                    if(shadowHitPoint.geometry.shapeType == shapeTypes.light ) {
                         var N = vec4.create();
                         vec4.copy(N, closest.normal);
                         var C = vec4.create();
@@ -228,25 +229,27 @@ class Scene {
                         var attenuation = 1/d;
                         var scale = 1/this.shadowRayCount;
 
-                        closest.color[0] += scale*attenuation*light.brightness*light.Id[0] * phong.Kd[0]*Math.max(0, lambertian);
-                        closest.color[1] += scale*attenuation*light.brightness*light.Id[1] * phong.Kd[1]*Math.max(0, lambertian);
-                        closest.color[2] += scale*attenuation*light.brightness*light.Id[2] * phong.Kd[2]*Math.max(0, lambertian);
+                        var lightProps = light.material.getLight(shadowHitPoint.modelSpacePos);
 
-                        closest.color[0] += scale*attenuation*light.brightness*light.Is[0] * phong.Ks[0]* Math.pow(Math.max(0, vec4.dot(R,closest.viewVec)),phong.s);
-                        closest.color[1] += scale*attenuation*light.brightness*light.Is[1] * phong.Ks[1]* Math.pow(Math.max(0, vec4.dot(R,closest.viewVec)),phong.s);
-                        closest.color[2] += scale*attenuation*light.brightness*light.Is[2] * phong.Ks[2]* Math.pow(Math.max(0, vec4.dot(R,closest.viewVec)),phong.s);
+                        closest.color[0] += scale*attenuation*lightProps.brightness*lightProps.Id[0] * phong.Kd[0]*Math.max(0, lambertian);
+                        closest.color[1] += scale*attenuation*lightProps.brightness*lightProps.Id[1] * phong.Kd[1]*Math.max(0, lambertian);
+                        closest.color[2] += scale*attenuation*lightProps.brightness*lightProps.Id[2] * phong.Kd[2]*Math.max(0, lambertian);
 
-                        closest.color[0] += scale*phong.Ke[0];
-                        closest.color[1] += scale*phong.Ke[1];
-                        closest.color[2] += scale*phong.Ke[2];
+                        closest.color[0] += scale*attenuation*lightProps.brightness*lightProps.Is[0] * phong.Ks[0]* Math.pow(Math.max(0, vec4.dot(R,closest.viewVec)),phong.s);
+                        closest.color[1] += scale*attenuation*lightProps.brightness*lightProps.Is[1] * phong.Ks[1]* Math.pow(Math.max(0, vec4.dot(R,closest.viewVec)),phong.s);
+                        closest.color[2] += scale*attenuation*lightProps.brightness*lightProps.Is[2] * phong.Ks[2]* Math.pow(Math.max(0, vec4.dot(R,closest.viewVec)),phong.s);
                     }
                 }
+                closest.color[0] += phong.Ke[0];
+                closest.color[1] += phong.Ke[1];
+                closest.color[2] += phong.Ke[2];
 
-                
+                var ambient = light.material.getAmbient();
+
+                closest.color[0] += ambient[0] * phong.Ka[0];
+                closest.color[1] += ambient[1] * phong.Ka[1];
+                closest.color[2] += ambient[2] * phong.Ka[2]; 
             }
-            closest.color[0] += light.Ia[0] * phong.Ka[0];
-            closest.color[1] += light.Ia[1] * phong.Ka[1];
-            closest.color[2] += light.Ia[2] * phong.Ka[2];
 
             if(closest.material.getReflectance(closest.modelSpacePos) > 0) {
                 //spawn a reflected ray
