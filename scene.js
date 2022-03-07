@@ -87,19 +87,20 @@ class Scene {
         this.lights = [];
 
         var light = new Sun(0, 0, 10000, 3500);
-        light.rayScale(250, 250, 250, 1);
+        light.rayScale(1000, 1000, 1000, 1);
         light.initVbo(gl);
         this.lights.push(light);
 
-        var light2 = new Light(100, 0, 5, 20);
+        /*var light2 = new Light(50, 0, 5, 10);
+        light2.setMaterial(new Disco(10, 5));
         light2.initVbo(gl);
-        this.lights.push(light2);
+        this.lights.push(light2);*/
 
-        /*var light3 = new Light(100, 100, 5, 10);
+        var light3 = new Light(-50, -50, 20, 20);
         light3.initVbo(gl);
-        this.lights.push(light3);*/
+        this.lights.push(light3);
 
-        var light4 = new Light(-4, 4, 4, .5);
+        var light4 = new Light(-4, 4, 4, .1);
         light4.rayScale(.1,.1,.1);
         light4.initVbo(gl);
         this.lights.push(light4);
@@ -110,47 +111,42 @@ class Scene {
         this.items.push(groundGrid);
 
         var sphere = new Sphere();
-        sphere.rayTranslate(-4, .5, .5);
-        //sphere.rayScale(.1, 2, 1);
+        sphere.rayTranslate(-4, .5, 2);
         this.items.push(sphere);
 
-        var sphere2 = new Sphere();
+        /*var sphere2 = new Sphere();
         sphere2.rayTranslate(.5, 0, 1);
-        //sphere2.rayScale(3, 3, 1);
-        this.items.push(sphere2);
+        sphere2.rayScale(.01, 1, 1);
+        this.items.push(sphere2);*/
 
         var sphere3 = new Sphere();
         sphere3.rayTranslate(0, 3, 1.5);
-        this.items.push(sphere3);
+        //this.items.push(sphere3);
 
         /*var disk = new Disk();
         disk.rayTranslate(4, 0, 1);
         disk.rayRotate(90, 1, 0, 0);
-        disk.initVbo(gl);
         this.items.push(disk);
 
         var disk3 = new Disk();
         disk3.rayTranslate(4, 0, 1);
         disk3.rayRotate(270, 1, 0, 0);
-        disk3.initVbo(gl);
         this.items.push(disk3);
 
         var disk2 = new Disk();
         disk2.rayTranslate(4, 8, 1);
         disk2.rayRotate(90, 1, 0, 0);
-        disk2.initVbo(gl);
         this.items.push(disk2);
 
         var disk4 = new Disk();
         disk4.rayTranslate(4, 8, 1);
         disk4.rayRotate(270, 1, 0, 0);
-        disk4.initVbo(gl);
         this.items.push(disk2);*/
 
         for(var item of this.items) {
             if(item.shapeType != shapeTypes.grid) {
-                var mirror = new Mirror();
-                item.setMaterial(mirror);
+                var checker = new Checkerboard();
+                item.setMaterial(checker);
                 item.initVbo(gl);
             }
         }
@@ -205,7 +201,7 @@ class Scene {
 
                     if(this.shadowRayCount > 1) {
                         var randVec = vec4.fromValues(Math.random()-1, Math.random()-1, Math.random()-1, 0);
-                        vec4.scaleAndAdd(shadowRay.dir, shadowRay.dir, randVec, 150*this.epsilon);
+                        vec4.scaleAndAdd(shadowRay.dir, shadowRay.dir, randVec, 200*this.epsilon);
                     }
                     var shadowRayHitList = new HitList();
                     this.traceRay(shadowRay, shadowRayHitList, depth+1, true);

@@ -3,7 +3,8 @@ const shapeTypes = {
     grid : 1,
     disk : 2,
     sphere: 3,
-    light: 4
+    light: 4,
+    cylinder: 5
 }
 
 class Geometry {
@@ -127,6 +128,7 @@ class Grid extends Geometry {
     getNormal(pos) {
         var normVec = vec4.fromValues(0, 0, 1, 0);
         vec4.transformMat4(normVec, normVec, this.normalToWorld);
+        vec3.normalize(normVec, normVec);
         normVec[3] = 0;
         return normVec;
     }
@@ -169,6 +171,7 @@ class Disk extends Geometry {
     getNormal(pos) {
         var normVec = vec4.fromValues(0, 0, 1, 0);
         vec4.transformMat4(normVec, normVec, this.normalToWorld);
+        vec3.normalize(normVec, normVec);
         normVec[3] = 0;
         return normVec;
     }
@@ -208,13 +211,14 @@ class Sphere extends Geometry {
         this.shapeType = shapeTypes.sphere;
     }
     initVbo(gl) {
-        var color = this.material.getColor().Kd;
+        var color = this.material.Kd;
         this.vboBox.init(gl, makeSphere(13, [color[0], color[1], color[2]]), 676);
         this.vboBox.drawMode = gl.LINE_STRIP;
     }
     getNormal(pos) {
         var normVec = vec4.fromValues(pos[0], pos[1], pos[2], pos[3]);
         vec4.transformMat4(normVec, normVec, this.normalToWorld);
+        vec3.normalize(normVec, normVec);
         normVec[3] = 0;
         return normVec;
     }
@@ -248,7 +252,7 @@ class Sphere extends Geometry {
             vec4.scaleAndAdd(hit.position, inRay.origin, inRay.dir, t0);
 
             hit.normal = vec4.create();
-            vec4.copy(hit.normal, this.getNormal(hit.modelSpacePos));
+            vec4.negate(hit.normal, this.getNormal(hit.modelSpacePos));
 
             hit.material = this.material;
 
@@ -289,13 +293,31 @@ class Sphere extends Geometry {
                 vec4.scaleAndAdd(secondHit.position, inRay.origin, inRay.dir, t1);
 
                 secondHit.normal = vec4.create();
-                vec4.copy(secondHit.normal, this.getNormal(secondHit.modelSpacePos));
+                vec4.negate(secondHit.normal, this.getNormal(secondHit.modelSpacePos));
 
                 secondHit.material = this.material;
 
                 hitList.insert(secondHit);
             }
         }
+    }
+}
+
+class Cylinder extends Geometry {
+    constructor(r = 1, h = 1) {
+        super();
+        this.radius = r;
+        this.height = 1;
+        this.shapeType = shapeTypes.cylinder;
+    }
+    initVbo(gl) {
+
+    }
+    getNormal(pos) {
+
+    }
+    trace() {
+
     }
 }
 
@@ -308,7 +330,7 @@ class Light extends Sphere {
         this.rayTranslate(x, y, z);
     }
     initVbo(gl) {
-        this.vboBox.init(gl, makeSphere(13, this.material.getLight().Is), 676);
+        this.vboBox.init(gl, makeSphere(13, this.material.Is), 676);
         this.vboBox.drawMode = gl.LINE_STRIP;
     }
 }
