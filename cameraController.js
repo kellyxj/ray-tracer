@@ -25,7 +25,21 @@ class CameraController {
 
         this.aspect = 1;
     }
-
+    setEyePos(pos) {
+        this.eyePosition = vec4.fromValues(pos[0], pos[1], pos[2], pos[3]);
+    }
+    setLookDirection(panAngle, tiltAngle) {
+        this.tiltAngle = tiltAngle;
+        this.panAngle = panAngle;
+        this.aimPoint = vec4.fromValues(this.eyePosition[0]+Math.cos(Math.PI*this.panAngle/180)*Math.cos(Math.PI*this.tiltAngle/180),
+                                        this.eyePosition[1]+Math.sin(-Math.PI*this.panAngle/180)*Math.cos(Math.PI*this.tiltAngle/180),
+                                        this.eyePosition[2]+Math.sin(Math.PI*this.tiltAngle/180),
+                                        1);
+        this.upVector = vec4.fromValues(Math.cos(Math.PI*this.panAngle/180)*Math.cos(Math.PI*(this.tiltAngle+90)/180),
+                                        Math.sin(-Math.PI*this.panAngle/180)*Math.cos(Math.PI*(this.tiltAngle+90)/180),
+                                        Math.sin(Math.PI*(this.tiltAngle+90)/180),
+                                        0);
+    }
     moveForward() {
         var d = vec4.create();
         vec4.sub(d, this.aimPoint, this.eyePosition);

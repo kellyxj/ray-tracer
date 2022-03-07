@@ -167,6 +167,7 @@ class Grid extends Geometry {
             vec4.copy(hit.normal, this.getNormal(hit.modelSpacePos[0], hit.modelSpacePos[1], hit.modelSpacePos[2]));
 
             hit.material = this.material;
+            vec4.subtract(hit.viewVec, inRay.origin, hit.position);
 
             hitList.insert(hit);
         }
@@ -213,6 +214,7 @@ class Disk extends Geometry {
             vec4.copy(hit.normal, this.getNormal(hit.modelSpacePos[0], hit.modelSpacePos[1], hit.modelSpacePos[2]));
 
             hit.material = this.material;
+            vec4.subtract(hit.viewVec, inRay.origin,hit.position );
 
             hitList.insert(hit);
         }
@@ -270,6 +272,7 @@ class Sphere extends Geometry {
             vec4.negate(hit.normal, this.getNormal(hit.modelSpacePos));
 
             hit.material = this.material;
+            vec4.subtract(hit.viewVec, inRay.origin, hit.position);
 
             hitList.insert(hit);
         }
@@ -296,6 +299,7 @@ class Sphere extends Geometry {
                 vec4.copy(firstHit.normal, this.getNormal(firstHit.modelSpacePos));
 
                 firstHit.material = this.material;
+                vec4.subtract(firstHit.viewVec, inRay.origin, firstHit.position);
 
                 hitList.insert(firstHit);
 
@@ -311,6 +315,7 @@ class Sphere extends Geometry {
                 vec4.negate(secondHit.normal, this.getNormal(secondHit.modelSpacePos));
 
                 secondHit.material = this.material;
+                vec4.subtract(secondHit.viewVec, inRay.origin, secondHit.position);
 
                 hitList.insert(secondHit);
             }

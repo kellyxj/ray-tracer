@@ -26,21 +26,27 @@ function main() {
     document.addEventListener("keydown", (e) => {
         if(e.key == "w") {
             cameraController.moveForward();
+            console.log(cameraController.eyePosition);
         }
         else if(e.key == "s" ) {
             cameraController.moveBack();
+            console.log(cameraController.eyePosition);
         }
         else if(e.key == "a") {
             cameraController.moveLeft();
+            console.log(cameraController.eyePosition);
         }
         else if(e.key == "d") {
             cameraController.moveRight();
+            console.log(cameraController.eyePosition);
         }
         else if(e.key == "e") {
             cameraController.moveUp();
+            console.log(cameraController.eyePosition);
         }
         else if(e.key == "q") {
             cameraController.moveDown();
+            console.log(cameraController.eyePosition);
         }
         else if(e.key == "ArrowUp") {
             cameraController.tiltUp();
@@ -70,7 +76,7 @@ function main() {
     });
 
     var sceneSelector = new SceneSelector(scene, gl, imageBuffer, cameraController);
-    sceneSelector.initMaterials();
+    sceneSelector.initReflections();
 
     imageBuffer.setTestPattern();
 

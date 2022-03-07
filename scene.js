@@ -102,9 +102,8 @@ class Scene {
         var closest = hitList.getMin();
         var phong = closest.material.getColor(closest.modelSpacePos);
 
-        closest.viewVec = vec4.create();
-        vec4.subtract(closest.viewVec, this.rayCam.eyePoint, closest.position);
-        vec4.normalize(closest.viewVec, closest.viewVec);
+        var V = vec4.create();
+        vec4.normalize(V, closest.viewVec);
 
         if(closest.geometry.shapeType == shapeTypes.none) {
             closest.color = vec4.fromValues(phong.Kd[0], phong.Kd[1], phong.Kd[2], 1);
@@ -132,13 +131,13 @@ class Scene {
                         vec4.scaleAndAdd(shadowRay.dir, shadowRay.dir, randVec, 200*this.epsilon);
                     }
                     var shadowRayHitList = new HitList();
-                    this.traceRay(shadowRay, shadowRayHitList, depth+1, true);
+                    this.traceRay(shadowRay, shadowRayHitList, depth, true);
 
                     var d = Math.sqrt(vec4.dot(L,L));
 
                     var shadowHitPoint = shadowRayHitList.getMin();
                     //direct illumination case
-                    if(shadowHitPoint.geometry.shapeType == shapeTypes.light) {
+                    if(shadowHitPoint.geometry.shapeType == shapeTypes.none || shadowHitPoint.geometry.shapeType == shapeTypes.light) {
                         var N = vec4.create();
                         vec4.copy(N, closest.normal);
                         var C = vec4.create();
@@ -159,21 +158,20 @@ class Scene {
                         closest.color[1] += scale*attenuation*lightProps.brightness*lightProps.Id[1] * phong.Kd[1]*Math.max(0, lambertian);
                         closest.color[2] += scale*attenuation*lightProps.brightness*lightProps.Id[2] * phong.Kd[2]*Math.max(0, lambertian);
 
-                        closest.color[0] += scale*attenuation*lightProps.brightness*lightProps.Is[0] * phong.Ks[0]* Math.pow(Math.max(0, vec4.dot(R,closest.viewVec)),phong.s);
-                        closest.color[1] += scale*attenuation*lightProps.brightness*lightProps.Is[1] * phong.Ks[1]* Math.pow(Math.max(0, vec4.dot(R,closest.viewVec)),phong.s);
-                        closest.color[2] += scale*attenuation*lightProps.brightness*lightProps.Is[2] * phong.Ks[2]* Math.pow(Math.max(0, vec4.dot(R,closest.viewVec)),phong.s);
+                        closest.color[0] += scale*attenuation*lightProps.brightness*lightProps.Is[0] * phong.Ks[0]* Math.pow(Math.max(0, vec4.dot(R,V)),phong.s);
+                        closest.color[1] += scale*attenuation*lightProps.brightness*lightProps.Is[1] * phong.Ks[1]* Math.pow(Math.max(0, vec4.dot(R,V)),phong.s);
+                        closest.color[2] += scale*attenuation*lightProps.brightness*lightProps.Is[2] * phong.Ks[2]* Math.pow(Math.max(0, vec4.dot(R,V)),phong.s);
                     }
                 }
-                closest.color[0] += phong.Ke[0];
-                closest.color[1] += phong.Ke[1];
-                closest.color[2] += phong.Ke[2];
-
                 var ambient = light.material.getAmbient();
 
                 closest.color[0] += ambient[0] * phong.Ka[0];
                 closest.color[1] += ambient[1] * phong.Ka[1];
                 closest.color[2] += ambient[2] * phong.Ka[2]; 
             }
+            closest.color[0] += phong.Ke[0];
+            closest.color[1] += phong.Ke[1];
+            closest.color[2] += phong.Ke[2];
 
             var reflectance = closest.material.getReflectance(closest.modelSpacePos);
             if(reflectance > 0) {
@@ -186,20 +184,18 @@ class Scene {
                 
                 var N = vec4.create();
                 vec4.copy(N, closest.normal);
-                var V = vec4.create();
-                vec4.copy(V, closest.viewVec);
 
                 var C = vec4.create();
-                vec4.scale(C, N, vec4.dot(V, N));
+                vec4.scale(C, N, vec4.dot(closest.viewVec, N));
                 var R = vec4.create();
                 vec4.scale(R, C, 2);
-                vec4.subtract(R, R, V);
+                vec4.subtract(R, R, closest.viewVec);
                 vec4.normalize(R,R);
 
                 vec4.copy(reflectedRay.dir, R);
 
                 if(depth < this.recursionDepth) {
-                    this.traceRay(reflectedRay, reflectedRayHitList, depth+1, inShadow);
+                    this.traceRay(reflectedRay, reflectedRayHitList, depth+1, false);
                 }
                 var bounceHit = reflectedRayHitList.getMin();
                 var bouncePhong = bounceHit.material.getColor(bounceHit.modelSpacePos);
