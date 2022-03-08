@@ -168,6 +168,7 @@ class Grid extends Geometry {
 
             hit.material = this.material;
             vec4.subtract(hit.viewVec, inRay.origin, hit.position);
+            vec4.normalize(hit.viewVec, hit.viewVec);
 
             hitList.insert(hit);
         }
@@ -215,6 +216,7 @@ class Disk extends Geometry {
 
             hit.material = this.material;
             vec4.subtract(hit.viewVec, inRay.origin,hit.position );
+            vec4.normalize(hit.viewVec, hit.viewVec);
 
             hitList.insert(hit);
         }
@@ -273,6 +275,7 @@ class Sphere extends Geometry {
 
             hit.material = this.material;
             vec4.subtract(hit.viewVec, inRay.origin, hit.position);
+            vec4.normalize(hit.viewVec, hit.viewVec);
 
             hitList.insert(hit);
         }
@@ -300,6 +303,7 @@ class Sphere extends Geometry {
 
                 firstHit.material = this.material;
                 vec4.subtract(firstHit.viewVec, inRay.origin, firstHit.position);
+                vec4.normalize(firstHit.viewVec, firstHit.viewVec);
 
                 hitList.insert(firstHit);
 
@@ -316,6 +320,7 @@ class Sphere extends Geometry {
 
                 secondHit.material = this.material;
                 vec4.subtract(secondHit.viewVec, inRay.origin, secondHit.position);
+                vec4.normalize(secondHit.viewVec, secondHit.viewVec);
 
                 hitList.insert(secondHit);
             }
@@ -356,8 +361,9 @@ class Light extends Sphere {
 }
 
 class Sun extends Light {
-    constructor(x=0, y=0, z=10000, brightness = 3000) {
+    constructor(x=0, y=0, z=10000, brightness = 5000) {
         super(x,y,z,brightness);
+
         this.rayScale(1000, 1000, 1000, 1);
         this.material = new SunMaterial(brightness);
     }

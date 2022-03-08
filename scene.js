@@ -103,7 +103,7 @@ class Scene {
         var phong = closest.material.getColor(closest.modelSpacePos);
 
         var V = vec4.create();
-        vec4.normalize(V, closest.viewVec);
+        vec4.copy(V, closest.viewVec);
 
         if(closest.geometry.shapeType == shapeTypes.none) {
             closest.color = vec4.fromValues(phong.Kd[0], phong.Kd[1], phong.Kd[2], 1);
@@ -124,7 +124,7 @@ class Scene {
                     vec3.normalize(directionVec, L);
                     vec4.copy(shadowRay.dir, directionVec);
 
-                    vec4.scaleAndAdd(shadowRay.origin, shadowRay.origin, closest.viewVec, this.epsilon);
+                    vec4.scaleAndAdd(shadowRay.origin, shadowRay.origin, V, this.epsilon);
 
                     if(this.shadowRayCount > 1) {
                         var randVec = vec4.fromValues(Math.random()-1, Math.random()-1, Math.random()-1, 0);
@@ -180,16 +180,16 @@ class Scene {
                 var reflectedRayHitList = new HitList();
 
                 vec4.copy(reflectedRay.origin, closest.position);
-                vec4.scaleAndAdd(reflectedRay.origin, reflectedRay.origin, closest.viewVec, this.epsilon);
+                vec4.scaleAndAdd(reflectedRay.origin, reflectedRay.origin, V, this.epsilon);
                 
                 var N = vec4.create();
                 vec4.copy(N, closest.normal);
 
                 var C = vec4.create();
-                vec4.scale(C, N, vec4.dot(closest.viewVec, N));
+                vec4.scale(C, N, vec4.dot(V, N));
                 var R = vec4.create();
                 vec4.scale(R, C, 2);
-                vec4.subtract(R, R, closest.viewVec);
+                vec4.subtract(R, R, V);
                 vec4.normalize(R,R);
 
                 vec4.copy(reflectedRay.dir, R);
@@ -208,6 +208,62 @@ class Scene {
                     closest.color[0] += reflectance*bounceHit.color[0];
                     closest.color[1] += reflectance*bounceHit.color[1];
                     closest.color[2] += reflectance*bounceHit.color[2];
+                }
+            }
+            var transparency = closest.material.getTransparency(closest.modelSpacePos);
+            if(transparency > 0) {
+                //spawn a transparency ray
+                var transparencyRay = new Ray();
+                var transparencyRayHitList = new HitList();
+                vec4.copy(transparencyRay.origin, closest.position);
+                vec4.scaleAndAdd(transparencyRay.origin, transparencyRay.origin, V, -this.epsilon);
+
+                vec4.negate(transparencyRay.dir, V);
+
+                var N = vec4.create();
+                vec4.copy(N, closest.normal);
+
+                var n_i = 1;
+                var n_t = 1;
+                if(closest.isEntry) {
+                    n_t = closest.material.n_r;
+                }
+                else {
+                    n_i = closest.material.n_r;
+                }
+                var inwardNormal = vec4.create();
+                vec4.negate(inwardNormal, N);
+                var dot = vec4.dot(transparencyRay.dir, inwardNormal);
+                var det = (n_i*n_i/(n_t*n_t) * (1-dot * dot));
+
+                //if det > 1 we have total internal reflection
+                if(det <= 1) {
+                    var parallel = vec4.create();
+                    var orthog = vec4.create();
+                    vec4.scale(parallel, inwardNormal, Math.sqrt(1-det));
+                    vec4.scaleAndAdd(orthog, transparencyRay.dir, inwardNormal, -dot);
+                    vec4.scale(orthog, orthog, n_i/n_t);
+                    vec4.add(transparencyRay.dir, parallel, orthog);
+                    if(depth < this.recursionDepth) {
+                        this.traceRay(transparencyRay, transparencyRayHitList, depth+1, false);
+                    }
+                }
+
+                var transparencyHit = transparencyRayHitList.getMin();
+                var transparencyPhong = transparencyHit.material.getColor(transparencyHit.modelSpacePos);
+                var d = vec4.distance(closest.position, transparencyHit.position);
+
+                var attenuation = Math.pow(Math.E, -transparencyHit.material.absorption*d);
+
+                if(transparencyHit.geometry.shapeType == shapeTypes.none) {
+                    closest.color[0] += attenuation*transparency*transparencyPhong.Kd[0];
+                    closest.color[1] += attenuation*transparency*transparencyPhong.Kd[1];
+                    closest.color[2] += attenuation*transparency*transparencyPhong.Kd[2];
+                }
+                else {
+                    closest.color[0] += attenuation*transparency*transparencyHit.color[0];
+                    closest.color[1] += attenuation*transparency*transparencyHit.color[1];
+                    closest.color[2] += attenuation*transparency*transparencyHit.color[2];
                 }
             }
         }
