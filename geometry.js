@@ -4,7 +4,8 @@ const shapeTypes = {
     disk : 2,
     sphere: 3,
     light: 4,
-    tube: 5
+    cylinder: 5,
+    cube: 6
 }
 
 class Geometry {
@@ -164,7 +165,7 @@ class Grid extends Geometry {
             vec4.scaleAndAdd(hit.position, inRay.origin, inRay.dir, t0);
 
             hit.normal = vec4.create();
-            vec4.copy(hit.normal, this.getNormal(hit.modelSpacePos[0], hit.modelSpacePos[1], hit.modelSpacePos[2]));
+            vec4.copy(hit.normal, this.getNormal(hit.modelSpacePos));
 
             hit.material = this.material;
             vec4.subtract(hit.viewVec, inRay.origin, hit.position);
@@ -212,7 +213,7 @@ class Disk extends Geometry {
             vec4.scaleAndAdd(hit.position, inRay.origin, inRay.dir, t0);
 
             hit.normal = vec4.create();
-            vec4.copy(hit.normal, this.getNormal(hit.modelSpacePos[0], hit.modelSpacePos[1], hit.modelSpacePos[2]));
+            vec4.copy(hit.normal, this.getNormal(hit.modelSpacePos));
 
             hit.material = this.material;
             vec4.subtract(hit.viewVec, inRay.origin,hit.position );
@@ -327,16 +328,155 @@ class Sphere extends Geometry {
     }
 }
 
-class Tube extends Geometry {
-    constructor(h = 1) {
+class Light extends Sphere {
+    constructor (x = 0, y = 0, z = 100, brightness = 1) {
         super();
-        this.shapeType = shapeTypes.tube;
+        this.radius = 1;
+        this.shapeType = shapeTypes.light;
+        this.material = new Lamp(brightness);
+
+        this.rayTranslate(x, y, z);
+    }
+    rayScale(sx, sy, sz) {
+        mat4.scale(this.modelMatrix, this.modelMatrix, vec3.fromValues(sx, sy, sz));
+        this.radius *= Math.cbrt(sx*sx+sy*sy+sz*sz);
+
+        if(Math.abs(sx) < glMatrix.GLMAT_EPSILON ||
+            Math.abs(sy) < glMatrix.GLMAT_EPSILON ||
+            Math.abs(sz) < glMatrix.GLMAT_EPSILON) {
+            console.log("CGeom.rayScale() ERROR!! zero-length scale!!!");
+            return null;
+        }
+        var c = mat4.create();
+        c[ 0] = 1/sx;
+        c[ 5] = 1/sy;
+        c[10] = 1/sz;
+        mat4.multiply(this.worldToModel,
+                      c, this.worldToModel);
+        mat4.transpose(this.normalToWorld, this.worldToModel);
+    }
+    initVbo(gl) {
+        this.vboBox.init(gl, makeSphere(13, this.material.Is), 676);
+        this.vboBox.drawMode = gl.LINE_STRIP;
+    }
+}
+
+class Sun extends Light {
+    constructor(x=0, y=0, z=10000, brightness = 5000) {
+        super(x,y,z,brightness);
+
+        this.rayScale(1000, 1000, 1000, 1);
+        this.material = new SunMaterial(brightness);
+    }
+}
+
+//really bad and buggy CFG implementation
+//after the CFG operation is applied, transformations will not work as expected
+class CFG extends Geometry {
+    constructor(A,B) {
+        super();
+        this.A = A;
+        this.B = B;
+    }
+    initVbo(gl) {
+        this.A.initVbo(gl);
+        this.B.initVbo(gl);
+    }
+    rayTranslate(x,y,z) {
+        this.A.rayTranslate(x,y,z);
+        this.B.rayTranslate(x,y,z);
+    }
+    rayRotate(angle, ax, ay, az) {
+        this.A.rayRotate(angle, ax,ay,az);
+        this.B.rayRotate(angle, ax,ay,az);
+    }
+    rayScale(ax, ay, az) {
+        this.A.rayScale(ax,ay,az);
+        this.B.rayScale(ax,ay,az);
+    }
+    setMaterial(m) {
+        this.A.setMaterial(m);
+        this.B.setMaterial(m);
+    }
+    drawPreview(mvpMatrix) {
+        if(this.A.vboBox.vboContents) {
+            this.A.vboBox.switchToMe();
+            this.A.vboBox.adjust(this.A.modelMatrix, mvpMatrix);
+            this.A.vboBox.reload();
+            this.A.vboBox.draw();
+        }
+        if(this.B.vboBox.vboContents) {
+            this.B.vboBox.switchToMe();
+            this.B.vboBox.adjust(this.B.modelMatrix, mvpMatrix);
+            this.B.vboBox.reload();
+            this.B.vboBox.draw();
+        }
+    }
+}
+
+class Union extends CFG {
+    constructor(A,B) {
+        super(A,B);
+    }
+    trace(inRay, hitList) {
+        var hitListA = new HitList();
+        this.A.trace(inRay, hitListA);
+
+        var hitListB = new HitList();
+        this.B.trace(inRay, hitListB);
+
+        for(var hit of hitListA.hitPoints) {
+            hitList.insert(hit);
+        }
+        for(var hit of hitListB.hitPoints) {
+            hitList.insert(hit);
+        }
+    }
+}
+
+class Intersection extends CFG {
+    constructor(A,B) {
+        super(A,B);
+    }
+    trace(inRay, hitList) {
+        var hitListA = new HitList();
+        this.A.trace(inRay, hitListA);
+
+        var hitListB = new HitList();
+        this.B.trace(inRay, hitListB);
+
+        var aMin = hitListA.getMin().t0;
+        var bMin = hitListB.getMin().t0;
+
+        var aMax = hitListA.getMax().t0;
+        var bMax = hitListB.getMax().t0;
+
+        for(var hit of hitListA.hitPoints) {
+            if(hit.t0 < bMax && hit.t0 > bMin) {
+                hitList.insert(hit);
+            }
+        }
+        for(var hit of hitListB.hitPoints) {
+            if(hit.t0 < aMax && hit.t0 > aMin) {
+                hitList.insert(hit);
+            }
+        }
+    }
+}
+
+
+//infinitely tall cylinder of radius 1. Used for CFG
+class Tube extends Geometry {
+    constructor() {
+        super();
+        this.shapeType = shapeTypes.cylinder;
     }
     initVbo(gl) {
         var color = this.material.getColor().Kd;
         this.vboBox.init(gl, makeCylinder(1,[0,0,0], 1, [color[0],color[1],color[2],color[3]]), 88);
         this.vboBox.drawMode = gl.LINE_STRIP;
     }
+    
     getNormal(pos) {
         var normVec = vec4.fromValues(pos[0], pos[1], 0, 0);
         vec4.transformMat4(normVec, normVec, this.normalToWorld);
@@ -431,44 +571,80 @@ class Tube extends Geometry {
     }
 }
 
-class Light extends Sphere {
-    constructor (x = 0, y = 0, z = 100, brightness = 1) {
+//slab 0 <= z <= 1
+class Slab extends Geometry {
+    constructor() {
         super();
-        this.radius = 1;
-        this.shapeType = shapeTypes.light;
-        this.material = new Lamp(brightness);
-
-        this.rayTranslate(x, y, z);
+        this.shapeType = shapeTypes.grid;
     }
-    rayScale(sx, sy, sz) {
-        mat4.scale(this.modelMatrix, this.modelMatrix, vec3.fromValues(sx, sy, sz));
-        this.radius *= Math.cbrt(sx*sx+sy*sy+sz*sz);
-
-        if(Math.abs(sx) < glMatrix.GLMAT_EPSILON ||
-            Math.abs(sy) < glMatrix.GLMAT_EPSILON ||
-            Math.abs(sz) < glMatrix.GLMAT_EPSILON) {
-            console.log("CGeom.rayScale() ERROR!! zero-length scale!!!");
-            return null;
+    getNormal(pos) {
+        var normVec = vec4.create();
+        if(pos[2] >= 1) {
+            normVec = vec4.fromValues(0, 0, 1, 0);
+            
         }
-        var c = mat4.create();
-        c[ 0] = 1/sx;
-        c[ 5] = 1/sy;
-        c[10] = 1/sz;
-        mat4.multiply(this.worldToModel,
-                      c, this.worldToModel);
-        mat4.transpose(this.normalToWorld, this.worldToModel);
+        else if(pos[2] <= 0) {
+            normVec = vec4.fromValues(0,0,-1,0);
+        }
+        vec4.transformMat4(normVec, normVec, this.normalToWorld);
+        vec3.normalize(normVec, normVec);
+        normVec[3] = 0;
+        return normVec;
     }
-    initVbo(gl) {
-        this.vboBox.init(gl, makeSphere(13, this.material.Is), 676);
-        this.vboBox.drawMode = gl.LINE_STRIP;
+    trace(inRay, hitList) {
+        var ray = new Ray();
+
+        vec4.transformMat4(ray.origin, inRay.origin, this.worldToModel);
+        vec4.transformMat4(ray.dir, inRay.dir, this.worldToModel);
+
+        const t0 = -ray.origin[2]/ray.dir[2];
+        const t1 = (1-ray.origin[2])/ray.dir[2];
+
+        var firstHit = new Hit();
+        firstHit.geometry = this;
+        firstHit.t0 = t0;
+
+        vec4.scaleAndAdd(firstHit.modelSpacePos, ray.origin, ray.dir, t0);
+        vec4.scaleAndAdd(firstHit.position, inRay.origin, inRay.dir, t0);
+
+        firstHit.normal = vec4.create();
+        vec4.copy(firstHit.normal, this.getNormal(firstHit.modelSpacePos));
+        if(t1 < 0) {
+            vec4.negate(firstHit.normal, firstHit.normal);
+        }
+
+        firstHit.material = this.material;
+        vec4.subtract(firstHit.viewVec, inRay.origin, firstHit.position);
+        vec4.normalize(firstHit.viewVec, firstHit.viewVec);
+
+        hitList.insert(firstHit);
+
+        var secondHit = new Hit();
+        secondHit.geometry = this;
+        secondHit.t0 = t1;
+
+        vec4.scaleAndAdd(secondHit.modelSpacePos, ray.origin, ray.dir, t1);
+        vec4.scaleAndAdd(secondHit.position, inRay.origin, inRay.dir, t1);
+
+        secondHit.normal = vec4.create();
+        vec4.copy(secondHit.normal, this.getNormal(secondHit.modelSpacePos));
+        if(t0 < 0) {
+            vec4.negate(secondHit.normal, secondHit.normal);
+        }
+
+        secondHit.material = this.material;
+        vec4.subtract(secondHit.viewVec, inRay.origin, secondHit.position);
+        vec4.normalize(secondHit.viewVec, secondHit.viewVec);
+
+        hitList.insert(secondHit);
     }
 }
 
-class Sun extends Light {
-    constructor(x=0, y=0, z=10000, brightness = 5000) {
-        super(x,y,z,brightness);
-
-        this.rayScale(1000, 1000, 1000, 1);
-        this.material = new SunMaterial(brightness);
+class Cylinder extends Intersection {
+    constructor() {
+        var A = new Tube();
+        var B = new Slab();
+        super(A, B);
+        this.shapeType = shapeTypes.cylinder;
     }
 }

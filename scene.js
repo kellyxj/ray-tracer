@@ -139,6 +139,7 @@ class Scene {
                     vec4.scaleAndAdd(shadowRay.origin, shadowRay.origin, V, this.epsilon);
 
                     var shadowRayHitList = new HitList();
+
                     this.traceRay(shadowRay, shadowRayHitList, depth, true);
 
                     var d = Math.sqrt(vec4.dot(L,L));
