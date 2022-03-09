@@ -183,7 +183,7 @@ class Disk extends Geometry {
     }
     initVbo(gl) {
         var color = this.material.getColor().Kd;
-        this.vboBox.init(gl, makeDisk(this.radius, [color[0],color[1],color[2]]), 20*this.radius+4)
+        this.vboBox.init(gl, makeDisk(this.radius, [color[0],color[1],color[2]]), 20*this.radius+4);
     }
     getNormal(pos) {
         var normVec = vec4.fromValues(0, 0, 1, 0);
@@ -204,7 +204,7 @@ class Disk extends Geometry {
         vec4.scaleAndAdd(hit.modelSpacePos, ray.origin, ray.dir, t0);
         var squareDist = hit.modelSpacePos[0]*hit.modelSpacePos[0]+hit.modelSpacePos[1]*hit.modelSpacePos[1];
         
-        if(t0 >= 0 && squareDist <= this.radius) {
+        if(t0 >= 0 && squareDist <= this.radius * this.radius) {
             hit.geometry = this;
             hit.t0 = t0;
 
@@ -224,9 +224,8 @@ class Disk extends Geometry {
 }
 
 class Sphere extends Geometry {
-    constructor(r = 1) {
+    constructor() {
         super();
-        this.radius = r;
         this.shapeType = shapeTypes.sphere;
     }
     initVbo(gl) {
@@ -329,30 +328,64 @@ class Sphere extends Geometry {
 }
 
 class Cylinder extends Geometry {
-    constructor(r = 1, h = 1) {
+    constructor(h = 1) {
         super();
-        this.radius = r;
-        this.height = 1;
+        this.height = h;
         this.shapeType = shapeTypes.cylinder;
     }
     initVbo(gl) {
-
+        var color = this.material.getColor().Kd;
+        this.vboBox.init(gl, makeCylinder(1,[0,0,0], this.height, [color[0],color[1],color[2],color[3]]), 88);
+        this.vboBox.drawMode = gl.LINE_STRIP;
     }
     getNormal(pos) {
-
+        var normVec = vec4.create();
+        if(pos[2] >= this.height) {
+            normVec = vec4.fromValues(0,0,1,0);
+            
+        }
+        else if(pos[2] <= 0) {
+            normVec = vec4.fromValues(0,0,-1,0);
+        }
+        else {
+            normVec = vec4.fromValues(pos[0], pos[1], 0, 0);
+        }
+        vec4.transformMat4(normVec, normVec, this.normalToWorld);
+        vec3.normalize(normVec, normVec);
+        normVec[3] = 0;
+        return normVec;
     }
-    trace() {
+    trace(inRay, hitList) {
 
     }
 }
 
 class Light extends Sphere {
     constructor (x = 0, y = 0, z = 100, brightness = 1) {
-        super(.1);
+        super();
+        this.radius = 1;
         this.shapeType = shapeTypes.light;
         this.material = new Lamp(brightness);
 
         this.rayTranslate(x, y, z);
+    }
+    rayScale(sx, sy, sz) {
+        mat4.scale(this.modelMatrix, this.modelMatrix, vec3.fromValues(sx, sy, sz));
+        this.radius *= Math.cbrt(sx*sx+sy*sy+sz*sz);
+
+        if(Math.abs(sx) < glMatrix.GLMAT_EPSILON ||
+            Math.abs(sy) < glMatrix.GLMAT_EPSILON ||
+            Math.abs(sz) < glMatrix.GLMAT_EPSILON) {
+            console.log("CGeom.rayScale() ERROR!! zero-length scale!!!");
+            return null;
+        }
+        var c = mat4.create();
+        c[ 0] = 1/sx;
+        c[ 5] = 1/sy;
+        c[10] = 1/sz;
+        mat4.multiply(this.worldToModel,
+                      c, this.worldToModel);
+        mat4.transpose(this.normalToWorld, this.worldToModel);
     }
     initVbo(gl) {
         this.vboBox.init(gl, makeSphere(13, this.material.Is), 676);

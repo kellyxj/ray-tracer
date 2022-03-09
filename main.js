@@ -76,7 +76,7 @@ function main() {
     });
 
     var sceneSelector = new SceneSelector(scene, gl, imageBuffer, cameraController);
-    sceneSelector.initTransparency();
+    sceneSelector.initMaterials();
 
     imageBuffer.setTestPattern();
 
