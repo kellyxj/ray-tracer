@@ -71,16 +71,16 @@ class Scene {
         this.items = [];
         this.lights = [];
 
-        this.AAtype = antiAliasing.jitteredSS;
+        this.AAtype = antiAliasing.none;
 
-        this.recursionDepth = 2;
+        this.recursionDepth = 0;
         this.sampleRate = 2;
 
         //used for soft shadows
         this.shadowRayCount = 1;
 
-        this.frameRate = 60;
-        this.exposureTime = 100;
+        this.frameRate = 1000;
+        this.exposureTime = 1000;
     }
     setImageBuffer(newImage) {
         this.rayCam.setSize(newImage.xSize, newImage.ySize);
@@ -282,38 +282,50 @@ class Scene {
         this.rayCam.rayLookAt(camController.eyePosition, camController.aimPoint, camController.upVector);
         this.imageBuffer.setTestPattern();
 
-        for(let i = 0; i < this.imageBuffer.xSize; i++) {
-            for(let j = 0; j < this.imageBuffer.ySize; j++) {
-        //for(let i = this.imageBuffer.xSize/2; i < this.imageBuffer.xSize/2+1; i++) {
-        //    for(let j = this.imageBuffer.ySize/2; j < this.imageBuffer.ySize/2+1; j++) {
-                if(this.AAtype == antiAliasing.none) {
-                    var hitList = new HitList();
-
-                    this.rayCam.setEyeRay(this.eyeRay, i+.5, j+.5);
-                    this.traceRay(this.eyeRay, hitList, 0, false);
-    
-                    const index = (j * this.imageBuffer.xSize + i) * 4;
-                    
-                    this.imageBuffer.floatBuffer[index] = hitList.getMin().color[0];
-                    this.imageBuffer.floatBuffer[index+1] = hitList.getMin().color[1];
-                    this.imageBuffer.floatBuffer[index+2] = hitList.getMin().color[2];
-                    this.imageBuffer.floatBuffer[index+3] = hitList.getMin().color[3];
+        for(let frameNum = 0; frameNum < this.frameRate; frameNum++) {
+            if(this.frameRate > 1) {
+                for(var item of this.items) {
+                    item.animate(this.exposureTime/this.frameRate);
                 }
-                else if(this.AAtype == antiAliasing.jitteredSS) {
-                    var d = 1/this.sampleRate;
-                    for(let k = 0; k < this.sampleRate; k++) {
-                        for(let m = 0; m < this.sampleRate; m++) {
-                            var hitList = new HitList();
-                            this.rayCam.setEyeRay(this.eyeRay, .5*d+i+d*k+d*(Math.random()-1), .5*d+j+d*m+d*(Math.random()-1));
+                for(var light of this.lights) {
+                    light.animate(this.exposureTime/this.frameRate);
+                }
+            }
+            var f =  1/this.frameRate;
+            for(let i = 0; i < this.imageBuffer.xSize; i++) {
+                for(let j = 0; j < this.imageBuffer.ySize; j++) {
+            //for(let i = this.imageBuffer.xSize/2; i < this.imageBuffer.xSize/2+1; i++) {
+            //    for(let j = this.imageBuffer.ySize/2; j < this.imageBuffer.ySize/2+1; j++) {
+                    if(this.AAtype == antiAliasing.none) {
+                        var hitList = new HitList();
 
-                            this.traceRay(this.eyeRay, hitList, 0, false);
+                        this.rayCam.setEyeRay(this.eyeRay, i+.5, j+.5);
+                        this.traceRay(this.eyeRay, hitList, 0, false);
+        
+                        const index = (j * this.imageBuffer.xSize + i) * 4;
+                        
+                        this.imageBuffer.floatBuffer[index] += f*hitList.getMin().color[0];
+                        this.imageBuffer.floatBuffer[index+1] += f*hitList.getMin().color[1];
+                        this.imageBuffer.floatBuffer[index+2] += f*hitList.getMin().color[2];
+                        this.imageBuffer.floatBuffer[index+3] += f*hitList.getMin().color[3];
+                    }
+                    else if(this.AAtype == antiAliasing.jitteredSS) {
+                        var d = 1/this.sampleRate;
+                        
+                        for(let k = 0; k < this.sampleRate; k++) {
+                            for(let m = 0; m < this.sampleRate; m++) {
+                                var hitList = new HitList();
+                                this.rayCam.setEyeRay(this.eyeRay, .5*d+i+d*k+d*(Math.random()-1), .5*d+j+d*m+d*(Math.random()-1));
 
-                            const index = (j * this.imageBuffer.xSize + i) * 4;
-                            
-                            this.imageBuffer.floatBuffer[index] += d*d*hitList.getMin().color[0];
-                            this.imageBuffer.floatBuffer[index+1] += d*d*hitList.getMin().color[1];
-                            this.imageBuffer.floatBuffer[index+2] += d*d*hitList.getMin().color[2];
-                            this.imageBuffer.floatBuffer[index+3] += d*d*hitList.getMin().color[3];
+                                this.traceRay(this.eyeRay, hitList, 0, false);
+
+                                const index = (j * this.imageBuffer.xSize + i) * 4;
+                                
+                                this.imageBuffer.floatBuffer[index] += f*d*d*hitList.getMin().color[0];
+                                this.imageBuffer.floatBuffer[index+1] += f*d*d*hitList.getMin().color[1];
+                                this.imageBuffer.floatBuffer[index+2] += f*d*d*hitList.getMin().color[2];
+                                this.imageBuffer.floatBuffer[index+3] += f*d*d*hitList.getMin().color[3];
+                            }
                         }
                     }
                 }

@@ -5,6 +5,8 @@ var rayView = new TextureMapVBO();
 var g_timeStep = 1000/60;
 var g_last = Date.now();
 
+var paused = true;
+
 //handles user interface for camera controls
 var cameraController = new CameraController([-10, 0, 2], 0, 0, false, 45, 1, 100);
 
@@ -65,18 +67,19 @@ function main() {
             console.log(cameraController.panAngle);
         }
         else if(e.key == "t") {
+            paused = true;
             scene.makeRayTracedImage(cameraController);
             rayView.switchToMe();
             rayView.reload(imageBuffer);
             console.log("tracing");
         }
         else if(e.key == " ") {
-            
+            paused = !paused;
         }
     });
 
     var sceneSelector = new SceneSelector(scene, gl, imageBuffer, cameraController);
-    sceneSelector.initCFG();
+    sceneSelector.initBlur();
 
     imageBuffer.setTestPattern();
 
@@ -103,10 +106,14 @@ function animate() {
       g_last = now;               // re-set our stopwatch/timer.
 
       for(var item of scene.items) {
-          item.animate(elapsed);
+          if(!paused) {
+            item.animate(elapsed);
+          }
       }
       for(var light of scene.lights) {
-          light.animate(elapsed);
+          if(!paused) {
+            light.animate(elapsed);
+          }
       }
     
       return elapsed;

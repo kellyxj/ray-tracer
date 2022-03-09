@@ -4,8 +4,7 @@ const shapeTypes = {
     disk : 2,
     sphere: 3,
     light: 4,
-    cylinder: 5,
-    cube: 6
+    cylinder: 5
 }
 
 class Geometry {
