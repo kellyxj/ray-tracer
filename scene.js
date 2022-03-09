@@ -71,13 +71,16 @@ class Scene {
         this.items = [];
         this.lights = [];
 
-        this.AAtype = antiAliasing.none;
+        this.AAtype = antiAliasing.jitteredSS;
 
-        this.recursionDepth = 0;
-        this.sampleRate = 4;
+        this.recursionDepth = 2;
+        this.sampleRate = 2;
 
         //used for soft shadows
-        this.shadowRayCount = 10;
+        this.shadowRayCount = 1;
+
+        this.frameRate = 60;
+        this.exposureTime = 100;
     }
     setImageBuffer(newImage) {
         this.rayCam.setSize(newImage.xSize, newImage.ySize);
@@ -121,16 +124,20 @@ class Scene {
 
                     var L = vec4.create();
                     vec4.subtract(L, lightCenter, closest.position);
-                    vec3.normalize(directionVec, L);
-                    vec4.copy(shadowRay.dir, directionVec);
 
+                    vec3.normalize(directionVec, L);
+                    if(this.shadowRayCount == 1) {
+                        vec4.copy(shadowRay.dir, directionVec);
+                    }
+
+                    else{
+                        var randVec = vec4.fromValues(2*Math.random()-1, 2*Math.random()-1, 2*Math.random()-1, 0);
+                        var source = vec4.create();
+                        vec4.scaleAndAdd(source, L, randVec, light.radius);
+                        vec4.normalize(shadowRay.dir, source);
+                    }
                     vec4.scaleAndAdd(shadowRay.origin, shadowRay.origin, V, this.epsilon);
 
-                    if(this.shadowRayCount > 1) {
-                        var multiplier = vec4.dot(L,L)*light.radius;
-                        var randVec = vec4.fromValues(multiplier*(Math.random()-1), multiplier*(Math.random()-1), multiplier*(Math.random()-1), 0);
-                        vec4.scaleAndAdd(shadowRay.dir, shadowRay.dir, randVec, this.epsilon);
-                    }
                     var shadowRayHitList = new HitList();
                     this.traceRay(shadowRay, shadowRayHitList, depth, true);
 

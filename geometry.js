@@ -4,7 +4,7 @@ const shapeTypes = {
     disk : 2,
     sphere: 3,
     light: 4,
-    cylinder: 5
+    tube: 5
 }
 
 class Geometry {
@@ -155,8 +155,8 @@ class Grid extends Geometry {
 
         const t0 = -ray.origin[2]/ray.dir[2];
 
-        var hit = new Hit();
         if(t0 >= 0) {
+            var hit = new Hit();
             hit.geometry = this;
             hit.t0 = t0;
 
@@ -327,36 +327,107 @@ class Sphere extends Geometry {
     }
 }
 
-class Cylinder extends Geometry {
+class Tube extends Geometry {
     constructor(h = 1) {
         super();
-        this.height = h;
-        this.shapeType = shapeTypes.cylinder;
+        this.shapeType = shapeTypes.tube;
     }
     initVbo(gl) {
         var color = this.material.getColor().Kd;
-        this.vboBox.init(gl, makeCylinder(1,[0,0,0], this.height, [color[0],color[1],color[2],color[3]]), 88);
+        this.vboBox.init(gl, makeCylinder(1,[0,0,0], 1, [color[0],color[1],color[2],color[3]]), 88);
         this.vboBox.drawMode = gl.LINE_STRIP;
     }
     getNormal(pos) {
-        var normVec = vec4.create();
-        if(pos[2] >= this.height) {
-            normVec = vec4.fromValues(0,0,1,0);
-            
-        }
-        else if(pos[2] <= 0) {
-            normVec = vec4.fromValues(0,0,-1,0);
-        }
-        else {
-            normVec = vec4.fromValues(pos[0], pos[1], 0, 0);
-        }
+        var normVec = vec4.fromValues(pos[0], pos[1], 0, 0);
         vec4.transformMat4(normVec, normVec, this.normalToWorld);
         vec3.normalize(normVec, normVec);
         normVec[3] = 0;
         return normVec;
     }
     trace(inRay, hitList) {
+        var ray = new Ray();
 
+        vec4.transformMat4(ray.origin, inRay.origin, this.worldToModel);
+        vec4.transformMat4(ray.dir, inRay.dir, this.worldToModel);
+
+        var r2s = vec4.create();
+        vec4.subtract(r2s, vec4.fromValues(0,0,ray.origin[2],1), ray.origin);
+        var L2 = vec3.dot(r2s,r2s);
+        var tcaS = vec3.dot(ray.dir, r2s);
+
+        if(L2 <= 1) {
+            var projection = vec4.fromValues(ray.dir[0], ray.dir[1], 0, 0);
+            var DL2 = vec3.dot(projection, projection);
+            var tca2 = tcaS*tcaS/DL2;
+
+            var LM2 = L2 - tca2;
+
+            var L2hc = 1-LM2;
+            var t0 = tcaS/DL2 + Math.sqrt(L2hc/DL2);
+
+            var hit = new Hit();
+            hit.t0 = t0;
+            hit.isEntry = false;
+            hit.geometry = this;
+
+            vec4.scaleAndAdd(hit.modelSpacePos, ray.origin, ray.dir, t0);
+            vec4.scaleAndAdd(hit.position, inRay.origin, inRay.dir, t0);
+
+            hit.normal = vec4.create();
+            vec4.negate(hit.normal, this.getNormal(hit.modelSpacePos));
+
+            hit.material = this.material;
+            vec4.subtract(hit.viewVec, inRay.origin, hit.position);
+            vec4.normalize(hit.viewVec, hit.viewVec);
+
+            hitList.insert(hit);
+        }
+     
+        else if(tcaS >= 0) {
+            var projection = vec4.fromValues(ray.dir[0], ray.dir[1], 0, 0);
+            var DL2 = vec3.dot(projection, projection);
+            var tca2 = tcaS*tcaS/DL2;
+
+            var LM2 = L2 - tca2;
+            if(LM2 <= 1) {
+                var L2hc = 1-LM2;
+                var t0 = tcaS/DL2 - Math.sqrt(L2hc/DL2);
+                var t1 = tcaS/DL2 + Math.sqrt(L2hc/DL2);
+
+                var firstHit = new Hit();
+                firstHit.t0 = t0;
+                firstHit.geometry = this;
+
+                vec4.scaleAndAdd(firstHit.modelSpacePos, ray.origin, ray.dir, t0);
+                vec4.scaleAndAdd(firstHit.position, inRay.origin, inRay.dir, t0);
+
+                firstHit.normal = vec4.create();
+                vec4.copy(firstHit.normal, this.getNormal(firstHit.modelSpacePos));
+
+                firstHit.material = this.material;
+                vec4.subtract(firstHit.viewVec, inRay.origin, firstHit.position);
+                vec4.normalize(firstHit.viewVec, firstHit.viewVec);
+
+                hitList.insert(firstHit);
+
+                var secondHit = new Hit();
+                secondHit.t0 = t1;
+                secondHit.geometry = this;
+                secondHit.isEntry = false;
+
+                vec4.scaleAndAdd(secondHit.modelSpacePos, ray.origin, ray.dir, t1);
+                vec4.scaleAndAdd(secondHit.position, inRay.origin, inRay.dir, t1);
+
+                secondHit.normal = vec4.create();
+                vec4.negate(secondHit.normal, this.getNormal(secondHit.modelSpacePos));
+
+                secondHit.material = this.material;
+                vec4.subtract(secondHit.viewVec, inRay.origin, secondHit.position);
+                vec4.normalize(secondHit.viewVec, secondHit.viewVec);
+
+                hitList.insert(secondHit);
+            }
+        }
     }
 }
 
