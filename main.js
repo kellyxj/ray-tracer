@@ -68,10 +68,10 @@ function main() {
         }
         else if(e.key == "t") {
             paused = true;
+            console.log("tracing");
             scene.makeRayTracedImage(cameraController);
             rayView.switchToMe();
             rayView.reload(imageBuffer);
-            console.log("tracing");
         }
         else if(e.key == " ") {
             paused = !paused;
@@ -79,7 +79,7 @@ function main() {
     });
 
     var sceneSelector = new SceneSelector(scene, gl, imageBuffer, cameraController);
-    sceneSelector.initBlur();
+    sceneSelector.initCSG();
 
     imageBuffer.setTestPattern();
 

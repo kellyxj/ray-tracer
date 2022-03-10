@@ -369,27 +369,31 @@ class Sun extends Light {
     }
 }
 
-//really bad and buggy CFG implementation
-//after the CFG operation is applied, transformations will not work as expected
-class CFG extends Geometry {
+//really bad and buggy CSG implementation
+//if using transformed primitives, after the CSG operation is applied, additional transformations applied to the combined CSG object will not work as expected
+
+class CSG extends Geometry {
     constructor(A,B) {
         super();
         this.A = A;
         this.B = B;
     }
     initVbo(gl) {
-        this.A.initVbo(gl);
-        this.B.initVbo(gl);
+        this.vboBox.init(gl,makeCube(-1,1,-1,1,-1,1), 16);
+        this.vboBox.drawMode = gl.LINE_STRIP;
     }
     rayTranslate(x,y,z) {
+        super.rayTranslate(x,y,z);
         this.A.rayTranslate(x,y,z);
         this.B.rayTranslate(x,y,z);
     }
     rayRotate(angle, ax, ay, az) {
+        super.rayRotate(angle, ax, ay, az);
         this.A.rayRotate(angle, ax,ay,az);
         this.B.rayRotate(angle, ax,ay,az);
     }
     rayScale(ax, ay, az) {
+        super.rayScale(ax,ay,az);
         this.A.rayScale(ax,ay,az);
         this.B.rayScale(ax,ay,az);
     }
@@ -397,23 +401,9 @@ class CFG extends Geometry {
         this.A.setMaterial(m);
         this.B.setMaterial(m);
     }
-    drawPreview(mvpMatrix) {
-        if(this.A.vboBox.vboContents) {
-            this.A.vboBox.switchToMe();
-            this.A.vboBox.adjust(this.A.modelMatrix, mvpMatrix);
-            this.A.vboBox.reload();
-            this.A.vboBox.draw();
-        }
-        if(this.B.vboBox.vboContents) {
-            this.B.vboBox.switchToMe();
-            this.B.vboBox.adjust(this.B.modelMatrix, mvpMatrix);
-            this.B.vboBox.reload();
-            this.B.vboBox.draw();
-        }
-    }
 }
 
-class Union extends CFG {
+class Union extends CSG {
     constructor(A,B) {
         super(A,B);
     }
@@ -433,7 +423,7 @@ class Union extends CFG {
     }
 }
 
-class Intersection extends CFG {
+class Intersection extends CSG {
     constructor(A,B) {
         super(A,B);
     }
@@ -570,7 +560,7 @@ class Tube extends Geometry {
     }
 }
 
-//slab 0 <= z <= 1
+//slab -1 <= z <= 1
 class Slab extends Geometry {
     constructor() {
         super();
@@ -596,7 +586,7 @@ class Slab extends Geometry {
         vec4.transformMat4(ray.origin, inRay.origin, this.worldToModel);
         vec4.transformMat4(ray.dir, inRay.dir, this.worldToModel);
 
-        const t0 = -ray.origin[2]/ray.dir[2];
+        const t0 = (-1-ray.origin[2])/ray.dir[2];
         const t1 = (1-ray.origin[2])/ray.dir[2];
 
         var firstHit = new Hit();
