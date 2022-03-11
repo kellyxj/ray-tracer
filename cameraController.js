@@ -118,7 +118,7 @@ class CameraController {
                                         0);
     }
     tiltUp() {
-        this.tiltAngle += 1;
+        this.tiltAngle += this.angularVel;
         if(Math.abs(this.tiltAngle % 360) > 90 && Math.abs(this.tiltAngle % 360) < 270) {
             this.inverted = true;
         }
@@ -135,7 +135,7 @@ class CameraController {
                                         0);
     }
     tiltDown() {
-        this.tiltAngle -= 1;
+        this.tiltAngle -= this.angularVel;
         if(Math.abs(this.tiltAngle % 360) > 90 && Math.abs(this.tiltAngle) % 360 < 270) {
             this.inverted = true;
         }

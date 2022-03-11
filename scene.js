@@ -91,10 +91,10 @@ class Scene {
             light.trace(eyeRay, hitList);
         }
         if(!inShadow) {
-            this.findShade(hitList, depth, inShadow);
+            this.findShade(hitList, depth);
         }
     }
-    findShade(hitList, depth, inShadow) {
+    findShade(hitList, depth) {
         if(hitList.size == 0) {
             var hit = new Hit();
             hitList.insert(hit);
