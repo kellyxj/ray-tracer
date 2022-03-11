@@ -206,7 +206,7 @@ class Scene {
                 }
                 var bounceHit = reflectedRayHitList.getMin();
                 var bouncePhong = bounceHit.material.getColor(bounceHit.modelSpacePos);
-                if(bounceHit.geometry.shapeType == shapeTypes.none) {
+                if(bounceHit.geometry.shapeType == shapeTypes.none && this.recursionDepth > 0) {
                     closest.color[0] += reflectance*bouncePhong.Kd[0];
                     closest.color[1] += reflectance*bouncePhong.Kd[1];
                     closest.color[2] += reflectance*bouncePhong.Kd[2];

@@ -371,6 +371,7 @@ class Sun extends Light {
 
 //really bad and buggy CSG implementation
 //if using transformed primitives, after the CSG operation is applied, additional transformations applied to the combined CSG object will not work as expected
+//i.e. model spaces of all primitives are assumed to be canonical
 
 class CSG extends Geometry {
     constructor(A,B) {
@@ -408,6 +409,10 @@ class Union extends CSG {
         super(A,B);
     }
     trace(inRay, hitList) {
+        var ray = new Ray();
+        vec4.transformMat4(ray.origin, inRay.origin, this.worldToModel);
+        vec4.transformMat4(ray.dir, inRay.dir, this.worldToModel);
+
         var hitListA = new HitList();
         this.A.trace(inRay, hitListA);
 
