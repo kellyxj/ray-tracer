@@ -7,6 +7,8 @@ var g_last = Date.now();
 
 var paused = true;
 
+const gui = new dat.GUI;
+
 //handles user interface for camera controls
 var cameraController = new CameraController([-10, 0, 2], 0, 0, false, 45, 1, 100);
 
@@ -79,15 +81,13 @@ function main() {
     });
 
     var sceneSelector = new SceneSelector(scene, gl, imageBuffer, cameraController);
-    sceneSelector.initReflections();
+    sceneSelector.initReflections(gui);
 
     imageBuffer.setTestPattern();
 
     rayView.init(gl, imageBuffer);
     rayView.switchToMe();
     rayView.reload(imageBuffer);
-
-    const gui = new dat.GUI;
 
     var container = document.getElementById("gui-container");
     container.appendChild(gui.domElement);
@@ -101,20 +101,22 @@ function main() {
     gui.add(scene, "sampleRate", 1, 10, 1);
     gui.add(scene, "shadowRayCount", 1, 1000, 1);
     gui.add(scene, "AAtype", 0, 1, 1);
-    const itemFolder = gui.addFolder("items");
-    const lightFolder = gui.addFolder("lights");
 
     shadowButton.addEventListener("click", ev => {
         sceneSelector.initShadows();
+
     });
     reflectionButton.addEventListener("click", ev => {
         sceneSelector.initReflections();
+        
     });
     materialButton.addEventListener("click", ev => {
         sceneSelector.initMaterials();
+        
     });
     CSG.addEventListener("click", ev => {
         sceneSelector.initCSG();
+        
     });
 
     drawAll(gl);

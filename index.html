@@ -3,13 +3,15 @@
   <head>
     <meta charset="utf-8" />
     <title>Ray Tracer</title>
+    <script src="lib/dat.gui.min.js"></script>
   </head>
   <body>
+    <div id = gui-container></div>
     <canvas id="webgl" width="600" height="600">
         Please use a browser that supports "canvas"
         </canvas>
         <p>WASD to move. Arrow keys to aim the camera. t to trace</p>
-        <div id = gui-container></div>
+        
         <button id = "shadow">shadows</button>
         <button id = "reflection">reflections</button>
         <button id = "material">materials</button>
@@ -20,7 +22,7 @@
         <script src="lib/cuon-utils.js"></script>
         <script src="lib/glmatrix.js"></script>
         <script src="lib/basicShapes.js"></script>
-        <script src="lib/dat.gui.min.js"></script>
+        
         <script src = "lib/animation.js"></script>
         <script src = "lib/materials.js"></script>
         <script src="lib/sceneSelector.js"></script>
