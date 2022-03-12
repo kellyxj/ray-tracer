@@ -85,7 +85,9 @@ class Scene {
     }
     traceRay(eyeRay, hitList, depth, inShadow) {
         for(const item of this.items) {
-            item.trace(eyeRay, hitList);
+            if(item.renderOn) {
+                item.trace(eyeRay, hitList);
+            }
         }
         for(const light of this.lights) {
             light.trace(eyeRay, hitList);
@@ -262,7 +264,7 @@ class Scene {
 
                 var attenuation = Math.pow(Math.E, -transparencyHit.material.absorption*d);
 
-                if(transparencyHit.geometry.shapeType == shapeTypes.none) {
+                if(transparencyHit.geometry.shapeType == shapeTypes.none && this.recursionDepth > 0) {
                     closest.color[0] += attenuation*transparency*transparencyPhong.Kd[0];
                     closest.color[1] += attenuation*transparency*transparencyPhong.Kd[1];
                     closest.color[2] += attenuation*transparency*transparencyPhong.Kd[2];

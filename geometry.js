@@ -18,6 +18,7 @@ class Geometry {
         this.animations = [];
 
         this.material = new Material();
+        this.renderOn = true;
     }
     initVbo(gl) {
         
@@ -120,7 +121,7 @@ class Geometry {
     }
 
     drawPreview(mvpMatrix) {
-        if(this.vboBox.vboContents) {
+        if(this.renderOn && this.vboBox.vboContents) {
             this.vboBox.switchToMe();
             this.vboBox.adjust(this.modelMatrix, mvpMatrix);
             this.vboBox.reload();

@@ -9,6 +9,7 @@ var paused = true;
 
 const gui = new dat.GUI;
 var lightCount;
+var itemCount;
 
 var canvas = document.getElementById('webgl');
 
@@ -98,9 +99,9 @@ function main() {
     const materialButton = document.getElementById("material");
     const CSG = document.getElementById("CSG");
 
-    gui.add(scene, "recursionDepth", 0, 8, 1);
+    gui.add(scene, "recursionDepth", 0, 8, 1).listen();
     gui.add(scene, "sampleRate", 1, 10, 1);
-    gui.add(scene, "shadowRayCount", 1, 1000, 1);
+    gui.add(scene, "shadowRayCount", 1, 1000, 1).listen();
     gui.add(scene, "AAtype", 0, 1, 1);
 
     gui.add(cameraController, "fovy", 30, 90).listen();
@@ -108,41 +109,57 @@ function main() {
     gui.add(cameraController, "speed", .01, 1).listen();
     gui.add(cameraController, "angularVel", .01, 10).listen();
 
-    addLightControls();
+    addControls();
 
     shadowButton.addEventListener("click", ev => {
         lightCount = scene.lights.length;
+        itemCount = scene.items.length;
         for(let i = 0; i < lightCount; i++) {
             gui.removeFolder(gui.__folders["light"+i]);
         }
+        for(let i = 0; i < itemCount; i++){
+            gui.removeFolder(gui.__folders["item"+i]);
+        }
         sceneSelector.initShadows();
-        addLightControls();
+        addControls();
     });
     reflectionButton.addEventListener("click", ev => {
         lightCount = scene.lights.length;
+        itemCount = scene.items.length;
         for(let i = 0; i < lightCount; i++) {
             gui.removeFolder(gui.__folders["light"+i]);
         }
+        for(let i = 0; i < itemCount; i++){
+            gui.removeFolder(gui.__folders["item"+i]);
+        }
         sceneSelector.initReflections();
-        addLightControls();
+        addControls();
         
     });
     materialButton.addEventListener("click", ev => {
         lightCount = scene.lights.length;
+        itemCount = scene.items.length;
         for(let i = 0; i < lightCount; i++) {
             gui.removeFolder(gui.__folders["light"+i]);
         }
+        for(let i = 0; i < itemCount; i++){
+            gui.removeFolder(gui.__folders["item"+i]);
+        }
         sceneSelector.initMaterials();
-        addLightControls();
+        addControls();
         
     });
     CSG.addEventListener("click", ev => {
         lightCount = scene.lights.length;
+        itemCount = scene.items.length;
         for(let i = 0; i < lightCount; i++) {
             gui.removeFolder(gui.__folders["light"+i]);
         }
+        for(let i = 0; i < itemCount; i++){
+            gui.removeFolder(gui.__folders["item"+i]);
+        }
         sceneSelector.initCSG();
-        addLightControls();
+        addControls();
     });
 
     drawAll(gl);
@@ -218,19 +235,22 @@ function drawTextureMap(gl) {
     rayView.draw();
 }
 
-//convert floating point RGB values to 8 bit ints
-function toRGB(floatColors) {
-    return [Math.floor(floatColors*255+.0001), Math.floor(floatColors*255+.0001),Math.floor(floatColors*255+.0001)];
-}
-
-function addLightControls() {
+function addControls() {
     lightCount = 0;
+    itemCount = 0;
     for(var light of scene.lights) {
         var lightFolder = gui.addFolder("light"+lightCount);
         var material = light.material;
         lightFolder.add(material, "brightness", 0);
-        lightFolder.open();
         lightCount++;
+    }
+    for(var item of scene.items) {
+        var itemFolder = gui.addFolder("item"+itemCount);
+        var material = item.material;
+        itemFolder.add(material, "reflectance", 0, 1, .01);
+        itemFolder.add(material, "transparency", 0, 1, .01);
+        itemFolder.add(item, "renderOn");
+        itemCount++;
     }
 }
 
