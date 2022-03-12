@@ -278,6 +278,9 @@ class Scene {
     makeRayTracedImage(camController) {
         this.rayCam.rayPerspective(camController.fovy, camController.aspect, camController.near);
         this.rayCam.rayLookAt(camController.eyePosition, camController.aimPoint, camController.upVector);
+
+        this.setImageBuffer(this.imageBuffer);
+
         this.imageBuffer.setTestPattern();
 
         for(let i = 0; i < this.imageBuffer.xSize; i++) {

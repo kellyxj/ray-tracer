@@ -29,8 +29,8 @@ class Camera {
     }
 
     setSize(xMax, yMax) {
-        this.xMax = xMax;
-        this.yMax = yMax;
+        this.xmax = xMax;
+        this.ymax = yMax;
 
         this.ufrac = (this.right - this.left) / this.xmax;
 	    this.vfrac = (this.top   - this.bot ) / this.ymax;
