@@ -90,7 +90,9 @@ class Scene {
             }
         }
         for(const light of this.lights) {
-            light.trace(eyeRay, hitList);
+            if(light.renderOn) {
+                light.trace(eyeRay, hitList);
+            }
         }
         if(!inShadow) {
             this.findShade(hitList, depth);
@@ -112,71 +114,73 @@ class Scene {
         }
         else {
             for(var light of this.lights) {
-                for(let i = 0; i < this.shadowRayCount; i++) {
-                    //spawn a shadow ray
-                    var shadowRay = new Ray();
-                    vec4.copy(shadowRay.origin, closest.position);
-                    var directionVec = vec4.create();
-
-                    var lightCenter = vec4.fromValues(0,0,0,1);
-                    vec4.transformMat4(lightCenter, lightCenter, light.modelMatrix);
-
-                    var L = vec4.create();
-                    vec4.subtract(L, lightCenter, closest.position);
-
-                    vec3.normalize(directionVec, L);
-                    if(this.shadowRayCount == 1) {
-                        vec4.copy(shadowRay.dir, directionVec);
+                if(light.renderOn) {
+                    for(let i = 0; i < this.shadowRayCount; i++) {
+                        //spawn a shadow ray
+                        var shadowRay = new Ray();
+                        vec4.copy(shadowRay.origin, closest.position);
+                        var directionVec = vec4.create();
+    
+                        var lightCenter = vec4.fromValues(0,0,0,1);
+                        vec4.transformMat4(lightCenter, lightCenter, light.modelMatrix);
+    
+                        var L = vec4.create();
+                        vec4.subtract(L, lightCenter, closest.position);
+    
+                        vec3.normalize(directionVec, L);
+                        if(this.shadowRayCount == 1) {
+                            vec4.copy(shadowRay.dir, directionVec);
+                        }
+    
+                        else{
+                            var randVec = vec4.fromValues(2*Math.random()-1, 2*Math.random()-1, 2*Math.random()-1, 0);
+                            var source = vec4.create();
+                            vec4.scaleAndAdd(source, L, randVec, light.radius);
+                            vec4.normalize(shadowRay.dir, source);
+                        }
+                        vec4.scaleAndAdd(shadowRay.origin, shadowRay.origin, V, this.epsilon);
+                        var fallOff = vec4.dot(directionVec, shadowRay.dir);
+    
+                        var shadowRayHitList = new HitList();
+    
+                        this.traceRay(shadowRay, shadowRayHitList, depth, true);
+    
+                        var d = Math.sqrt(vec4.dot(L,L));
+    
+                        var shadowHitPoint = shadowRayHitList.getMin();
+                        //direct illumination case
+                        if(shadowHitPoint.geometry.shapeType == shapeTypes.none || shadowHitPoint.geometry.shapeType == shapeTypes.light) {
+                            var N = vec4.create();
+                            vec4.copy(N, closest.normal);
+                            var C = vec4.create();
+                            vec4.scale(C, N, vec4.dot(L,N));
+                            var R = vec4.create();
+                            vec4.scale(R, C, 2);
+                            vec4.subtract(R, R, L);
+                            vec4.normalize(R, R);
+                            vec4.normalize(L, L);
+                            const lambertian = vec4.dot(L,N);
+    
+                            var attenuation = 1/d;
+                            var scale = 1/this.shadowRayCount*fallOff;
+    
+                            var lightProps = light.material.getLight(shadowHitPoint.modelSpacePos);
+    
+                            closest.color[0] += scale*attenuation*lightProps.brightness*lightProps.Id[0] * phong.Kd[0]*Math.max(0, lambertian);
+                            closest.color[1] += scale*attenuation*lightProps.brightness*lightProps.Id[1] * phong.Kd[1]*Math.max(0, lambertian);
+                            closest.color[2] += scale*attenuation*lightProps.brightness*lightProps.Id[2] * phong.Kd[2]*Math.max(0, lambertian);
+    
+                            closest.color[0] += scale*attenuation*lightProps.brightness*lightProps.Is[0] * phong.Ks[0]* Math.pow(Math.max(0, vec4.dot(R,V)),phong.s);
+                            closest.color[1] += scale*attenuation*lightProps.brightness*lightProps.Is[1] * phong.Ks[1]* Math.pow(Math.max(0, vec4.dot(R,V)),phong.s);
+                            closest.color[2] += scale*attenuation*lightProps.brightness*lightProps.Is[2] * phong.Ks[2]* Math.pow(Math.max(0, vec4.dot(R,V)),phong.s);
+                        }
                     }
-
-                    else{
-                        var randVec = vec4.fromValues(2*Math.random()-1, 2*Math.random()-1, 2*Math.random()-1, 0);
-                        var source = vec4.create();
-                        vec4.scaleAndAdd(source, L, randVec, light.radius);
-                        vec4.normalize(shadowRay.dir, source);
-                    }
-                    vec4.scaleAndAdd(shadowRay.origin, shadowRay.origin, V, this.epsilon);
-                    var fallOff = vec4.dot(directionVec, shadowRay.dir);
-
-                    var shadowRayHitList = new HitList();
-
-                    this.traceRay(shadowRay, shadowRayHitList, depth, true);
-
-                    var d = Math.sqrt(vec4.dot(L,L));
-
-                    var shadowHitPoint = shadowRayHitList.getMin();
-                    //direct illumination case
-                    if(shadowHitPoint.geometry.shapeType == shapeTypes.none || shadowHitPoint.geometry.shapeType == shapeTypes.light) {
-                        var N = vec4.create();
-                        vec4.copy(N, closest.normal);
-                        var C = vec4.create();
-                        vec4.scale(C, N, vec4.dot(L,N));
-                        var R = vec4.create();
-                        vec4.scale(R, C, 2);
-                        vec4.subtract(R, R, L);
-                        vec4.normalize(R, R);
-                        vec4.normalize(L, L);
-                        const lambertian = vec4.dot(L,N);
-
-                        var attenuation = 1/d;
-                        var scale = 1/this.shadowRayCount*fallOff;
-
-                        var lightProps = light.material.getLight(shadowHitPoint.modelSpacePos);
-
-                        closest.color[0] += scale*attenuation*lightProps.brightness*lightProps.Id[0] * phong.Kd[0]*Math.max(0, lambertian);
-                        closest.color[1] += scale*attenuation*lightProps.brightness*lightProps.Id[1] * phong.Kd[1]*Math.max(0, lambertian);
-                        closest.color[2] += scale*attenuation*lightProps.brightness*lightProps.Id[2] * phong.Kd[2]*Math.max(0, lambertian);
-
-                        closest.color[0] += scale*attenuation*lightProps.brightness*lightProps.Is[0] * phong.Ks[0]* Math.pow(Math.max(0, vec4.dot(R,V)),phong.s);
-                        closest.color[1] += scale*attenuation*lightProps.brightness*lightProps.Is[1] * phong.Ks[1]* Math.pow(Math.max(0, vec4.dot(R,V)),phong.s);
-                        closest.color[2] += scale*attenuation*lightProps.brightness*lightProps.Is[2] * phong.Ks[2]* Math.pow(Math.max(0, vec4.dot(R,V)),phong.s);
-                    }
+                    var ambient = light.material.getAmbient();
+    
+                    closest.color[0] += ambient[0] * phong.Ka[0];
+                    closest.color[1] += ambient[1] * phong.Ka[1];
+                    closest.color[2] += ambient[2] * phong.Ka[2]; 
                 }
-                var ambient = light.material.getAmbient();
-
-                closest.color[0] += ambient[0] * phong.Ka[0];
-                closest.color[1] += ambient[1] * phong.Ka[1];
-                closest.color[2] += ambient[2] * phong.Ka[2]; 
             }
             closest.color[0] += phong.Ke[0];
             closest.color[1] += phong.Ke[1];
@@ -324,5 +328,33 @@ class Scene {
             }
         }
         this.imageBuffer.toInt();
+    }
+    updateMaterials(itemControllers, lightControllers, gl) {
+        for(var controller of itemControllers) {
+            var item = this.items[controller.index];
+
+            item.material.Ke = toFloatColor(controller.Ke);
+            item.material.Ka = toFloatColor(controller.Ka);
+            item.material.Kd = toFloatColor(controller.Kd);
+            item.material.Ks = toFloatColor(controller.Ks);
+            item.material.s = controller.shininess;
+            item.material.reflectance = controller.reflectance;
+            item.material.transparency = controller.transparency;
+
+            item.renderOn = controller.renderOn;
+
+            item.vboBox.switchToMe();
+            item.initVbo(gl);
+        }
+        for(var controller of lightControllers) {
+            var light = this.lights[controller.index];
+
+            light.material.Ia = toFloatColor(controller.Ia);
+            light.material.Id = toFloatColor(controller.Id);
+            light.material.Is = toFloatColor(controller.Is);
+            light.material.brightness = controller.brightness;
+
+            light.renderOn = controller.renderOn;
+        }
     }
 }

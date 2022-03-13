@@ -3,8 +3,8 @@ const shapeTypes = {
     grid : 1,
     disk : 2,
     sphere: 3,
-    light: 4,
-    cylinder: 5
+    cylinder: 4,
+    light: 5
 }
 
 class Geometry {
