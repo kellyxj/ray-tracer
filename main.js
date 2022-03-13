@@ -86,7 +86,7 @@ function main() {
     });
 
     var sceneSelector = new SceneSelector(scene, gl, imageBuffer, cameraController);
-    sceneSelector.initReflections(gui);
+    sceneSelector.initNoise(gui);
 
     imageBuffer.setTestPattern();
 
@@ -100,7 +100,8 @@ function main() {
     const shadowButton = document.getElementById("shadow");
     const reflectionButton = document.getElementById("reflection");
     const materialButton = document.getElementById("material");
-    const CSG = document.getElementById("CSG");
+    const CSGButton = document.getElementById("CSG");
+    const noiseButton = document.getElementById("noise");
 
     gui.add(scene, "recursionDepth", 0, 8, 1).listen();
     gui.add(scene, "sampleRate", 1, 10, 1);
@@ -120,25 +121,46 @@ function main() {
         sceneSelector.initShadows();
         addLightControllers(scene.lights);
         addItemControllers(scene.items);
+
+        var currentScene = document.getElementById("currentScene");
+        currentScene.innerHTML = "shadows";
     });
     reflectionButton.addEventListener("click", ev => {
         removeControllers();
         sceneSelector.initReflections();
         addLightControllers(scene.lights);
         addItemControllers(scene.items);
+
+        var currentScene = document.getElementById("currentScene");
+        currentScene.innerHTML = "reflections";
     });
     materialButton.addEventListener("click", ev => {
         removeControllers();
         sceneSelector.initMaterials();
         addLightControllers(scene.lights);
         addItemControllers(scene.items);
+
+        var currentScene = document.getElementById("currentScene");
+        currentScene.innerHTML = "materials";
     });
-    CSG.addEventListener("click", ev => {
+    CSGButton.addEventListener("click", ev => {
         removeControllers();
         sceneSelector.initCSG();
         addLightControllers(scene.lights);
         addItemControllers(scene.items);
+
+        var currentScene = document.getElementById("currentScene");
+        currentScene.innerHTML = "CSG";
     });
+    noiseButton.addEventListener("click", ev => {
+        removeControllers();
+        sceneSelector.initNoise();
+        addLightControllers(scene.lights);
+        addItemControllers(scene.items);
+
+        var currentScene = document.getElementById("currentScene");
+        currentScene.innerHTML = "noise";
+    })
 
     drawAll(gl);
 

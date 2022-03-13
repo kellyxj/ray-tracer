@@ -111,6 +111,7 @@ class SceneSelector {
         sphere4.rayTranslate(1, 0, 1.5);
         var glass = new Glass();
         sphere4.setMaterial(glass);
+        sphere4.renderOn = false;
         scene.items.push(sphere4);
 
         this.initVbos();
@@ -231,7 +232,7 @@ class SceneSelector {
     initNoise() {
         var scene = this.scene;
 
-        this.camController.setEyePos(vec4.fromValues(0, -15, 1, 1));
+        this.camController.setEyePos(vec4.fromValues(0, -5, 1, 1));
         this.camController.setLookDirection(-90, 0);
 
         scene.recursionDepth = 1;
@@ -247,15 +248,20 @@ class SceneSelector {
         var sun = new Sun();
         scene.lights.push(sun);
 
+        var light = new Light(0, -6, 1, 2);
+        light.rayScale(.1, .1, .1);
+        scene.lights.push(light);
+
         scene.items = [];
 
         var groundGrid = new Grid();
         scene.items.push(groundGrid);
 
         var sphere = new Sphere();
-        var plastic = new Plastic();
-        sphere.setMaterial(plastic);
+        var noisemap = new NoiseMap(4, 2);
+        sphere.setMaterial(noisemap);
         sphere.rayTranslate(0,0,1);
+
         scene.items.push(sphere);
 
         this.initVbos();

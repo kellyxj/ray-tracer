@@ -10,12 +10,20 @@
     <canvas id="webgl" width="1000" height="600">
         Please use a browser that supports "canvas"
         </canvas>
-        <p>WASD to move. Arrow keys to aim the camera. t to trace</p>
+        <ul>
+          <li>WASD to move. Arrow keys to aim the camera. t to trace</li>
+          <li>Camera takes sampleRate * sampleRate samples per pixel if antialiasing is enabled.
+            AAtype 0: no antialiasing. AAtype 1: jittered supersampling
+          </li>
+          <li>speed controls the camera's movement speed. angularVel controls the camera's turn rate</li>
+        </ul>
         
+        <p>Current scene: <div id = "currentScene">reflections</div></p>
         <button id = "shadow">shadows</button>
         <button id = "reflection">reflections</button>
         <button id = "material">materials</button>
         <button id = "CSG">CSG</button>
+        <button id = "noise">noise</button>
         
         <script src="lib/webgl-utils.js"></script>
         <script src="lib/webgl-debug.js"></script>
@@ -26,16 +34,16 @@
         <script src="lib/perlin.js"></script>
         <script src = "lib/animation.js"></script>
         <script src = "lib/materials.js"></script>
-        <script src="lib/sceneSelector.js"></script>
+        <script src="controllers/sceneSelector.js"></script>
 
         <script src = "vboBox.js"></script> 
-        <script src = "cameraController.js"></script> 
+        <script src = "controllers/cameraController.js"></script> 
         <script src = "camera.js"></script> 
         <script src = "geometry.js"></script> 
         <script src = "imageBuffer.js"></script> 
         <script src = "scene.js"></script> 
 
-        <script src = "geometryController.js"></script>
+        <script src = "controllers/geometryController.js"></script>
         <script src="main.js"></script>
   </body>
 </html>
