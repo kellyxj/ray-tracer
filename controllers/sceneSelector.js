@@ -258,7 +258,10 @@ class SceneSelector {
         scene.items.push(groundGrid);
 
         var sphere = new Sphere();
-        var noisemap = new NoiseMap(4, 2);
+        var noisemap = new NoiseMap(2, 2);
+        noisemap.materials[0] = new Glass();
+        noisemap.materials[1] = new Checkerboard();
+
         sphere.setMaterial(noisemap);
         sphere.rayTranslate(0,0,1);
 
