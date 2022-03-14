@@ -86,7 +86,7 @@ function main() {
     });
 
     var sceneSelector = new SceneSelector(scene, gl, imageBuffer, cameraController);
-    sceneSelector.initNoise(gui);
+    sceneSelector.initNoise();
 
     imageBuffer.setTestPattern();
 
@@ -102,11 +102,14 @@ function main() {
     const materialButton = document.getElementById("material");
     const CSGButton = document.getElementById("CSG");
     const noiseButton = document.getElementById("noise");
+    const nextButton = document.getElementById("nextButton");
 
     gui.add(scene, "recursionDepth", 0, 8, 1).listen();
     gui.add(scene, "sampleRate", 1, 10, 1);
     gui.add(scene, "shadowRayCount", 1, 1000, 1).listen();
     gui.add(scene, "AAtype", 0, 1, 1);
+
+    gui.add(sceneSelector, "index", 0, sceneSelector.maxIndex-1, 1).listen();
 
     gui.add(cameraController, "fovy", -90, 90).listen();
     gui.add(cameraController, "aspect",.1,10).listen();
@@ -124,6 +127,8 @@ function main() {
 
         var currentScene = document.getElementById("currentScene");
         currentScene.innerHTML = "shadows";
+
+        nextButton.style.display = "none";
     });
     reflectionButton.addEventListener("click", ev => {
         removeControllers();
@@ -133,6 +138,8 @@ function main() {
 
         var currentScene = document.getElementById("currentScene");
         currentScene.innerHTML = "reflections";
+
+        nextButton.style.display = "none";
     });
     materialButton.addEventListener("click", ev => {
         removeControllers();
@@ -142,6 +149,8 @@ function main() {
 
         var currentScene = document.getElementById("currentScene");
         currentScene.innerHTML = "materials";
+
+        nextButton.style.display = "none";
     });
     CSGButton.addEventListener("click", ev => {
         removeControllers();
@@ -151,6 +160,8 @@ function main() {
 
         var currentScene = document.getElementById("currentScene");
         currentScene.innerHTML = "CSG";
+
+        nextButton.style.display = "none";
     });
     noiseButton.addEventListener("click", ev => {
         removeControllers();
@@ -160,6 +171,12 @@ function main() {
 
         var currentScene = document.getElementById("currentScene");
         currentScene.innerHTML = "noise";
+
+        nextButton.style.display = "block";
+    });
+    nextButton.addEventListener("click", ev => {
+        sceneSelector.index = (sceneSelector.index+1) % sceneSelector.maxIndex;
+        sceneSelector.initNoise();
     })
 
     drawAll(gl);

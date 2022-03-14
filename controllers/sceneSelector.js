@@ -4,6 +4,9 @@ class SceneSelector {
         this.gl = gl;
         this.pic = pic;
         this.camController = camController;
+        
+        this.maxIndex = 10;
+        this.index = Math.floor(Math.random()*this.maxIndex);
     }
     initVbos() {
         for(var light of this.scene.lights) {
@@ -235,7 +238,7 @@ class SceneSelector {
         this.camController.setEyePos(vec4.fromValues(0, -5, 1, 1));
         this.camController.setLookDirection(-90, 0);
 
-        scene.recursionDepth = 1;
+        scene.recursionDepth = 2;
         scene.shadowRayCount = 1;
 
         scene.rayCam.rayPerspective(this.camController.fovy, this.camController.aspect, this.camController.near);
@@ -252,20 +255,122 @@ class SceneSelector {
         light.rayScale(.1, .1, .1);
         scene.lights.push(light);
 
+        var light2 = new Light(0, 0, .1, .1);
+        light2.rayScale(.1, .1, .1);
+        scene.lights.push(light2);
+
         scene.items = [];
 
         var groundGrid = new Grid();
         scene.items.push(groundGrid);
 
-        var sphere = new Sphere();
-        var noisemap = new NoiseMap(2, 2);
-        noisemap.materials[0] = new Glass();
-        noisemap.materials[1] = new Checkerboard();
+        var shuffler = [];
 
-        sphere.setMaterial(noisemap);
+        var air = new Air();
+        var mirror = new Mirror();
+        var glass = new Glass();
+        var plastic = new Plastic();
+        var plastic2 = new Plastic();
+        var noisemap = new NoiseMap(4,2);
+        var noisemap2 = new NoiseMap(2, 2);
+        glass.Kd = [0,.6,.6];
+        var checker = new NoisedCheckerboard(3, 1, 4, .5);
+        checker.materials[0] = mirror;
+        checker.materials[1] = air;
+        checker.materials[2] = glass;
+
+        var sphere = new Sphere();
+
+        sphere.setMaterial(checker);
         sphere.rayTranslate(0,0,1);
 
-        scene.items.push(sphere);
+        shuffler.push(sphere);
+
+        var checker2 = new NoisedCheckerboard(10, 5, 5, .2);
+        for(var material of checker2.materials) {
+            material.Ke[0] = material.Kd[0]/3;
+            material.Ke[1] = material.Kd[1]/3;
+            material.Ke[2] = material.Kd[2]/3;
+        }
+
+        var sphere2 = new Sphere();
+
+        sphere2.setMaterial(checker2);
+        sphere2.rayTranslate(0,0,1);
+        
+        shuffler.push(sphere2);
+
+        var sphere3 = new Sphere();
+        sphere3.setMaterial(noisemap);
+        noisemap.materials[0].Kd = [.5, 1, .5];
+        noisemap.materials[1].Kd = [1, .4, .4];
+        noisemap.materials[2].Kd = [.4, .5, 1];
+        noisemap.materials[3].Kd = [1, 1, 1];
+        sphere3.rayTranslate(0,0,1);
+
+        shuffler.push(sphere3);
+
+        var sphere4 = new Sphere();
+        noisemap2.materials[0] = mirror;
+        noisemap2.materials[1] = air;
+        sphere4.setMaterial(noisemap2);
+        sphere4.rayTranslate(0,0,1);
+
+        shuffler.push(sphere4);
+
+        var sphere5 = new Sphere();
+        var noisemap3 = new LerpedColors(2, mirror, air);
+        sphere5.setMaterial(noisemap3);
+        sphere5.rayTranslate(0,0,1);
+
+        shuffler.push(sphere5);
+
+        var sphere6 = new Sphere();
+        var noisemap4 = new LerpedColors(2, glass, air);
+        sphere6.setMaterial(noisemap4);
+        sphere6.rayTranslate(0,0,1);
+
+        shuffler.push(sphere6);
+
+        var sphere7 = new Sphere();
+        var glass2 = new Glass();
+        glass2.Kd = [.8,.6,.8];
+        var noisemap5 = new LerpedColors(2, glass2, mirror);
+        sphere7.setMaterial(noisemap5);
+        sphere7.rayTranslate(0,0,1);
+
+        shuffler.push(sphere7);
+
+        var sphere8 = new Sphere();
+        var black = new Plastic();
+        black.Kd = [1,1,1];
+        var white = new Plastic();
+        white.Kd = [0,0,0];
+
+        var noisemap6 = new LerpedColors(1, black, white);
+        sphere8.setMaterial(noisemap6);
+        sphere8.rayTranslate(0,0,1);
+
+        shuffler.push(sphere8);
+
+        var sphere9 = new Sphere();
+        var checker3 = new Checkerboard(mirror, air);
+        sphere9.setMaterial(checker3);
+        sphere9.rayTranslate(0,0,1);
+
+        shuffler.push(sphere9);
+
+        var sphere10 = new Sphere();
+        var noisemap7 = new NoiseMap(2, 2);
+        var noisemap8 = new LerpedColors(4, plastic, plastic2);
+        noisemap7.materials[0] = air;
+        noisemap7.materials[1] = noisemap8;
+        sphere10.setMaterial(noisemap7);
+        sphere10.rayTranslate(0,0,1);
+
+        shuffler.push(sphere10);
+
+        scene.items.push(shuffler[this.index]);
 
         this.initVbos();
     }
