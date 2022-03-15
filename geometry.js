@@ -19,6 +19,8 @@ class Geometry {
 
         this.material = new Material();
         this.renderOn = true;
+
+        this.bumpNormals = false;
     }
     initVbo(gl) {
         
@@ -237,6 +239,8 @@ class Sphere extends Geometry {
     getNormal(pos) {
         var normVec = vec4.fromValues(pos[0], pos[1], pos[2], pos[3]);
         vec4.transformMat4(normVec, normVec, this.normalToWorld);
+        var randVec = vec4.fromValues(2*Math.random()-1, 2*Math.random()-1, 2*Math.random()-1, 0);
+        vec4.scaleAndAdd(normVec, normVec, randVec, this.bumpNormals ? this.material.bumpAmount : 0);
         vec3.normalize(normVec, normVec);
         normVec[3] = 0;
         return normVec;

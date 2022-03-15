@@ -176,8 +176,11 @@ function main() {
     });
     nextButton.addEventListener("click", ev => {
         sceneSelector.index = (sceneSelector.index+1) % sceneSelector.maxIndex;
+        removeControllers();
         sceneSelector.initNoise();
-    })
+        addLightControllers(scene.lights);
+        addItemControllers(scene.items);
+    });
 
     drawAll(gl);
 
