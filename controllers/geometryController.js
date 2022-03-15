@@ -23,6 +23,8 @@ class GeometryController {
         this.renderOn = true;
 
         this.index;
+
+        this.bumpNormals = false;
     }
 }
 

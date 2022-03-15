@@ -407,9 +407,9 @@ class SceneSelector {
         var glass2 = new Glass();
         
         sphere13.bumpNormals = true;
-        glass2.bumpAmount = .02;
+        mirror2.bumpAmount = .02;
 
-        sphere13.setMaterial(plastic);
+        sphere13.setMaterial(mirror2);
         sphere13.rayTranslate(0,0,1);
 
         shuffler.push(sphere13);

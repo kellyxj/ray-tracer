@@ -285,6 +285,9 @@ function addItemControllers(items) {
         controller.reflectance = item.material.reflectance;
         controller.transparency = item.material.transparency;
 
+        controller.bumpNormals = item.bumpNormals;
+        controller.bumpAmount = item.material.bumpAmount;
+
         controller.renderOn = item.renderOn;
     
         var folder = gui.addFolder(controller.name);
@@ -296,6 +299,8 @@ function addItemControllers(items) {
         folder.add(controller, "shininess", 0, 200, .1).listen();
         folder.add(controller, "reflectance", 0, 1, .01).listen();
         folder.add(controller, "transparency",0, 1, .01).listen();
+        folder.add(controller, "bumpNormals").listen();
+        folder.add(controller, "bumpAmount", 0, .1, .0001).listen();
         folder.add(controller, "renderOn").listen();
 
         itemControllers.push(controller);

@@ -341,6 +341,9 @@ class Scene {
             item.material.reflectance = controller.reflectance;
             item.material.transparency = controller.transparency;
 
+            item.bumpNormals = controller.bumpNormals;
+            item.material.bumpAmount = controller.bumpAmount;
+
             item.renderOn = controller.renderOn;
 
             item.vboBox.switchToMe();
