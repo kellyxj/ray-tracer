@@ -146,6 +146,8 @@ class Grid extends Geometry {
     getNormal(pos) {
         var normVec = vec4.fromValues(0, 0, 1, 0);
         vec4.transformMat4(normVec, normVec, this.normalToWorld);
+        var randVec = vec4.fromValues(2*Math.random()-1, 2*Math.random()-1, 2*Math.random()-1, 0);
+        vec4.scaleAndAdd(normVec, normVec, randVec, this.bumpNormals ? this.material.bumpAmount : 0);
         vec3.normalize(normVec, normVec);
         normVec[3] = 0;
         return normVec;
@@ -191,6 +193,8 @@ class Disk extends Geometry {
     getNormal(pos) {
         var normVec = vec4.fromValues(0, 0, 1, 0);
         vec4.transformMat4(normVec, normVec, this.normalToWorld);
+        var randVec = vec4.fromValues(2*Math.random()-1, 2*Math.random()-1, 2*Math.random()-1, 0);
+        vec4.scaleAndAdd(normVec, normVec, randVec, this.bumpNormals ? this.material.bumpAmount : 0);
         vec3.normalize(normVec, normVec);
         normVec[3] = 0;
         return normVec;
@@ -479,6 +483,8 @@ class Tube extends Geometry {
     getNormal(pos) {
         var normVec = vec4.fromValues(pos[0], pos[1], 0, 0);
         vec4.transformMat4(normVec, normVec, this.normalToWorld);
+        var randVec = vec4.fromValues(2*Math.random()-1, 2*Math.random()-1, 2*Math.random()-1, 0);
+        vec4.scaleAndAdd(normVec, normVec, randVec, this.bumpNormals ? this.material.bumpAmount : 0);
         vec3.normalize(normVec, normVec);
         normVec[3] = 0;
         return normVec;
@@ -585,6 +591,8 @@ class Slab extends Geometry {
         else if(pos[2] <= 0) {
             normVec = vec4.fromValues(0,0,-1,0);
         }
+        var randVec = vec4.fromValues(2*Math.random()-1, 2*Math.random()-1, 2*Math.random()-1, 0);
+        vec4.scaleAndAdd(normVec, normVec, randVec, this.bumpNormals ? this.material.bumpAmount : 0);
         vec4.transformMat4(normVec, normVec, this.normalToWorld);
         vec3.normalize(normVec, normVec);
         normVec[3] = 0;
